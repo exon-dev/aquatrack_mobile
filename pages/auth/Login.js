@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import bcrypt from 'bcryptjs';
 import Entypo from '@expo/vector-icons/Entypo';
 
@@ -25,6 +26,12 @@ const Login = () => {
     password: '',
   });
 
+  const checkSession = async () => {
+    const session = await AsyncStorage.getItem('session');
+    if (session) {
+      navigation.navigate('Dashboard');
+    }
+  };
   
   const handleInputChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
@@ -63,7 +70,7 @@ const Login = () => {
       if (!passwordMatch) {
         throw new Error("Invalid password");
       }
-  
+      await AsyncStorage.setItem('session', JSON.stringify(employee));
       console.log("Login successful, employee:", employee);
       navigation.navigate('Dashboard');
   
@@ -78,6 +85,10 @@ const Login = () => {
       }
     }
   };
+
+  useEffect(() => {
+    checkSession();
+  }, []);
 
   return (
     <View style={styles.container}>
