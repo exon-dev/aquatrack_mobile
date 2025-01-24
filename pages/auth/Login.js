@@ -20,7 +20,7 @@ const Login = () => {
         {/* Logo and Title */}
         <View style={styles.header}>
           <Image
-            source={require('../assets/aqua.png')}
+            source={require('../../assets/aqua.png')}
             style={styles.logo}
           />
           <Text style={styles.title}>AquaTrack</Text>
@@ -47,7 +47,7 @@ const Login = () => {
             style={styles.eyeButton}
             onPress={() => setPasswordVisible(!passwordVisible)}
           >
-            <View>{passwordVisible ? <Entypo name="eye-with-line" size={20} color="black" /> : <Entypo name="eye" size={20} color="black" />  }</View>
+            <View>{passwordVisible ? <Entypo name="eye" size={20} color="black" /> : <Entypo name="eye-with-line" size={20} color="black" />  }</View>
           </TouchableOpacity>
         </View>
 
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 10,
-    transform: [{ rotate: '6deg' }],
+    transform: [{ rotate: '-6deg' }],
   },
   card: {
     backgroundColor: '#fff',
