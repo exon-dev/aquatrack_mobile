@@ -12,34 +12,36 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    const checkSession = async () => {
-      const session = await AsyncStorage.getItem('session');
-      if (session) {
-        setUser(JSON.parse(session));
-      }
-      setIsLoading(false);
-    };
+  // useEffect(() => {
+  //   const checkSession = async () => {
+  //     const session = await AsyncStorage.getItem('session');
+  //     if (session) {
+  //       setUser(JSON.parse(session));
+  //     }
+  //     setIsLoading(false);
+  //   };
 
-    checkSession();
-  }, []);
+  //   checkSession();
+  // }, []);
 
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+  //       <ActivityIndicator size="large" />
+  //     </View>
+  //   );
+  // }
 
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        {user ? (
+        {/* {user ? (
           <Stack.Screen name="Dashboard" options={{headerShown: false}} component={Dashboard} />
         ) : (
           <Stack.Screen name="Login" options={{headerShown: false}} component={Login} />
-        )}
+        )} */}
+        <Stack.Screen name="Login" options={{headerShown: false}} component={Login} />
+        <Stack.Screen name="Dashboard" options={{headerShown: false}} component={Dashboard} />
       </Stack.Navigator>
     </NavigationContainer>
   );
