@@ -3,20 +3,17 @@ import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 're
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
-const Navbar = () => {
+const Navbar = ({ onScannedResult }) => {
   const [loading, setLoading] = React.useState(false);
 
-  // Function to open the camera and send the image to the API
   const openCamera = async () => {
     try {
-      // Request camera permissions
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Sorry, we need camera permissions to make this work!');
         return;
       }
-  
-      // Launch the camera
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaType,
         allowsEditing: true,
@@ -24,28 +21,23 @@ const Navbar = () => {
         quality: 1,
         base64: false,
       });
-  
-      console.log('Camera Result:', result); // Log the result to debug
-  
-      // Handle the result
+
+      console.log('Camera Result:', result);
+
       if (!result.canceled) {
         setLoading(true);
         try {
-          // Create a FormData object
           const formData = new FormData();
-          
-          // Append the image file to the form data
           const uri = result.assets[0].uri;
           const fileType = result.assets[0].mimeType;
           const fileName = uri.split('/').pop();
-  
+
           formData.append('file', {
             uri: uri,
             name: fileName,
             type: fileType,
           });
-  
-          // Send the image to the API
+
           const apiResponse = await fetch('http://192.168.254.106:5000/api/v1/detect', {
             method: 'POST',
             headers: {
@@ -53,9 +45,13 @@ const Navbar = () => {
             },
             body: formData,
           });
-  
+
           const responseData = await apiResponse.json();
-          console.log('API Response:', responseData); // Log the API response to debug
+          // console.log('API Response:', responseData);
+          onScannedResult({
+            container_predictions: responseData.predictions,
+            image: responseData.prediction_image,
+          }); // Pass the result to the parent component
         } catch (error) {
           console.log('Error sending image to API:', error);
         } finally {
@@ -69,7 +65,6 @@ const Navbar = () => {
 
   return (
     <View style={styles.container}>
-      {/* Floating Bottom Navigation Bar */}
       <View style={styles.navBar}>
         <TouchableOpacity style={styles.navItem}>
           <Ionicons name="home" size={24} color="#000" />
