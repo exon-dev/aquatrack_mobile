@@ -3,6 +3,7 @@ import React from "react";
 import { useNavigation, CommonActions } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Entypo from "@expo/vector-icons/Entypo";
+import Navbar from "../modals/Navbar";
 
 const Dashboard = () => {
   const navigation = useNavigation();
@@ -43,6 +44,9 @@ const Dashboard = () => {
         <View style={styles.transactions}>
           <Text style={styles.transactionsTitle}>Transactions</Text>
         </View>
+        <View style={styles.transactionsContainer}>
+          <Text>Hello</Text>
+        </View>
         <View style={styles.cardContainer}>
           {[1, 2, 3].map((item, index) => (
             <View key={index} style={styles.cardContent}>
@@ -78,6 +82,9 @@ const Dashboard = () => {
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
       </ScrollView>
+      <View style={[styles.navbar]}>
+        <Navbar />
+      </View>
     </View>
   );
 };
@@ -151,11 +158,28 @@ const styles = StyleSheet.create({
     color: "#262626",
     marginBottom: 8,
   },
+
+  transactionsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    marginBottom: 16,
+    height: 50,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+
   cardContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
+
   cardContent: {
     flexDirection: "column",
     backgroundColor: "white",
@@ -202,6 +226,14 @@ const styles = StyleSheet.create({
   employeeText: {
     color: "#525252",
   },
+
+  navbar: {
+    position: "absolute",
+    bottom: 40,
+    left: 0,
+    right: 0,
+  },
+
   buttonContainer: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -2,6 +2,14 @@
   "expo": {
     "name": "aquatrack_mobile",
     "slug": "aquatrack_mobile",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "android": {
+      "permissions": ["CAMERA"]
+    },
+    "ios": {
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses the camera to take photos."
+      }
+    }
   }
 }
