@@ -2,7 +2,6 @@ import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
 
 const Navbar = () => {
   const [loading, setLoading] = React.useState(false);

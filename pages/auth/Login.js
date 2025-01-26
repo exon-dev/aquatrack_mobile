@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import bcrypt from 'bcryptjs';
 import Entypo from '@expo/vector-icons/Entypo';
+import Toast from 'react-native-toast-message';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -30,6 +31,7 @@ const Login = () => {
     setFormData({ ...formData, [name]: value });
   };
   
+  
   const handleLogin = async () => {
     if (!formData.email || !formData.password) {
       alert('Please fill in all fields');
@@ -38,6 +40,12 @@ const Login = () => {
   
     try {
       console.log("Attempting to log in with:", formData);
+  
+      // Show the "Logging in..." toast with an ActivityIndicator
+      const loggingInToast = Toast.show({
+        text1: "Logging in...",
+        duration: 0, // Set duration to 0 to keep it visible until manually dismissed
+      });
   
       // Fetch the employee record by email or username
       const { data: employees, error: fetchError } = await supabase
@@ -63,12 +71,33 @@ const Login = () => {
       if (!passwordMatch) {
         throw new Error("Invalid password");
       }
+  
+      // Save the session data
       await AsyncStorage.setItem('session', JSON.stringify(employee));
+  
+      // Dismiss the "Logging in..." toast
+      Toast.hide(loggingInToast);
+  
+      // Show the "Login successful!" toast
+      Toast.show({
+        text1: "Login successful!",
+        duration: 2000,
+      });
+  
       console.log("Login successful, employee:", employee);
-      navigation.navigate('Dashboard');
+  
+      // Navigate to the Dashboard after 2 seconds
+      setTimeout(() => {
+        navigation.navigate('Dashboard');
+      }, 2000);
   
     } catch (error) {
       console.error("Error logging in:", error.message);
+  
+      // Dismiss the "Logging in..." toast in case of an error
+      Toast.hide(loggingInToast);
+  
+      // Show appropriate error messages
       if (error.message === "Invalid password") {
         alert("Password incorrect.");
       } else if (error.message === "Invalid email") {
@@ -85,6 +114,7 @@ const Login = () => {
 
   return (
     <View style={styles.container}>
+      <Toast />
       <View style={styles.containerCard}>
       </View>
       <View style={styles.card}>
