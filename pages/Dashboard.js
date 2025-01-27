@@ -99,9 +99,9 @@ const Dashboard = () => {
           <Text style={styles.resultText}>Image:</Text>
           <Image
             style={styles.scannedImage}
-            source={{
-              uri: `${scannedResult.image}`,
-            }}
+            // source={{
+            //   uri: `${scannedResult.image}`,
+            // }}
           />
         </BottomSheet>
       )}
