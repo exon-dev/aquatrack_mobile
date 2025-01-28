@@ -12,21 +12,19 @@ import { supabase } from './auth/Login';
 const Dashboard = () => {
   const navigation = useNavigation();
   const [sessionData, setSessionData] = useState(null);
-  const [transactionData, setTransactionData] = useState(null);
+  const [transactionData, setTransactionData] = useState([]); // Initialize as an empty array
   const [scannedResult, setScannedResult] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
 
   const checkSession = async () => {
     const session = await AsyncStorage.getItem('session');
-
-    console.log("Session: ", session)
-
     if (session) {
       setSessionData(JSON.parse(session));
     }
   };
 
   const fetchTransactions = async () => {
+    if (!sessionData) return; // Ensure sessionData is available
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
@@ -37,13 +35,11 @@ const Dashboard = () => {
       return;
     }
 
-    console.log('Transactions:', data);
-
     if (data) {
       setTransactionData(data);
     }
   };
-  
+
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('session');
@@ -69,17 +65,15 @@ const Dashboard = () => {
     setIsVisible(false); // Update the visibility state
   };
 
-  const tableData = [
-    {id: 1, date: "01-28-2025", name: 'Refill', age: 28, city: 'In Progress', occupation: 'Engineer' },
-    {id: 2, date: "01-28-2025", name: 'Delivery', age: 34, city: 'Delivered', occupation: 'Designer' },
-    {id: 3, date: "01-28-2025", name: 'Delivery', age: 45, city: 'Delivered', occupation: 'Teacher' },
-    {id: 4, date: "01-28-2025", name: 'Refill', age: 30, city: 'In Progress', occupation: 'Doctor' },
-  ];
+  useEffect(() => {
+    checkSession(); // Fetch session data on component mount
+  }, []);
 
   useEffect(() => {
-    fetchTransactions();
-    // checkSession();
-  }, []);
+    if (sessionData) {
+      fetchTransactions(); // Fetch transactions when sessionData is available
+    }
+  }, [sessionData]);
 
   return (
     <View style={styles.container}>
@@ -101,60 +95,13 @@ const Dashboard = () => {
           )}
           <Text style={styles.welcomeDescription}>Have a nice day!</Text>
         </View>
-        {/* <View style={styles.transactions}>
-          <Text style={styles.transactionsTitle}>Transactions</Text>
-        </View> */}
-        {/* <View style={styles.transactionHeader}>
-          <View style={styles.headers}>
-            <Text style={styles.headersText}>Date</Text>
-          </View>
-          <View style={styles.headers}>
-            <Text style={styles.headersText}>Type</Text>
-          </View>
-          <View style={styles.headers}>
-            <Text style={styles.headersText}>Containers</Text>
-          </View>
-          <View style={styles.headers}>
-            <Text style={styles.headersText}>Status</Text>
-          </View>
-        </View> */}
-        {/* <Divider /> */}
-        {/* <View style={styles.hr} /> */}
-        {/* <View style={styles.tabContainer}>
-          <TouchableOpacity style={styles.tab}>
-            <Text>Transactions</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.tab}>
-            <Text>Lorem Ipsum</Text>
-          </TouchableOpacity>
-        </View> */}
 
-        {/* <View style={styles.transaction}>
-          <View style={styles.transactionDesc}>
-            <Text style={styles.transactionText}>01-28-2025</Text>
-          </View>
-          <View style={styles.transactionDesc}>
-            <Text style={styles.transactionText}>Refill</Text>
-          </View>
-          <View style={styles.transactionDesc}>
-            <Text style={styles.transactionText}>12</Text>
-          </View>
-          <View style={styles.transactionDesc}>
-            <Text style={styles.transactionText}>In Progress</Text>
-          </View>
-        </View> */}
-
-        {/* <View style={styles.transaction}>
-          <View style={styles.transactionDesc}>
-            <Text>01-28-2003</Text>
-          </View>
-          <View style={styles.transactionDesc}>
-            <Text>Refill</Text>
-          </View>
-          <View style={styles.transactionDesc}>
-            <Text>12</Text>
-          </View>
-        </View> */}
+        <View style={styles.addListContainer}>
+          <TouchableOpacity style={styles.addItem}>
+            <Entypo name="add-to-list" size={16} color="#fff" />
+            <Text style={styles.addItemText}>Add Transaction</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.tableContainer}>
           <View style={styles.headerRow}>
@@ -163,7 +110,6 @@ const Dashboard = () => {
             <Text style={[styles.headerCell, styles.cell]}>No. of Containers</Text>
             <Text style={[styles.headerCell, styles.cell]}>Status</Text>
           </View>
-
           {transactionData.map((row, index) => (
             <TouchableOpacity key={index} style={styles.row}>
               <Text style={styles.cell}>{new Date(row.created_at).toLocaleDateString()}</Text>
@@ -174,36 +120,16 @@ const Dashboard = () => {
           ))}
         </View>
 
-        {/* <View style={styles.cardContainer}>
-          {[1, 2, 3].map((item, index) => (
-            <View key={index} style={styles.cardContent}>
-              <Image
-                style={styles.image}
-                source={{
-                  uri: 'https://tecdn.b-cdn.net/img/new/standard/nature/186.jpg',
-                }}
-              />
-              <View style={styles.contentContainer}>
-                <Text style={styles.stationName}>Aquasis Water Refilling Station</Text>
-                <View style={styles.addressContainer}>
-                  <Entypo name="location-pin" size={16} color="#3b71ca" />
-                  <Text style={styles.addressText}>Jose, 123 Main St</Text>
-                </View>
-                <View style={styles.employeeContainer}>
-                  <Entypo name="users" size={16} color="green" />
-                  <Text style={styles.employeeText}>5 Employee/s</Text>
-                </View>
-              </View>
-            </View>
-          ))}
-        </View> */}
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
+
       </ScrollView>
+
       <View style={[styles.navbar]}>
         <Navbar onScannedResult={handleScannedResult} />
       </View>
+
       {scannedResult && (
         <BottomSheet onClose={handleCloseBottomSheet}>
           <Text style={styles.resultText}>Scanned Result:</Text>
@@ -214,11 +140,12 @@ const Dashboard = () => {
           <Image
             style={styles.scannedImage}
             // source={{
-            //   uri: `${scannedResult.image}`,
+            //   uri: ${scannedResult.image},
             // }}
           />
         </BottomSheet>
       )}
+
     </View>
   );
 };
@@ -363,11 +290,32 @@ const styles = StyleSheet.create({
 
   transactionDesc: {
     // justifyContent: 'space-between',
-
   },
 
   transactionText: {
     color: '#262626',
+  },
+
+  addListContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    width: '100%',
+  },
+
+  addItem: {
+    flexDirection: 'row',
+    width: 'auto',
+    padding: 8,
+    gap: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 50,
+    backgroundColor: 'green',
+  },
+
+  addItemText: {
+    color: '#fff',
+    fontWeight: 'medium',
   },
 
   tableContainer: {

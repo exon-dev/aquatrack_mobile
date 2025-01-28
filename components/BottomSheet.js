@@ -11,7 +11,6 @@ import Animated, {
 const BottomSheet = ({ children, onClose }) => {
   const translateY = useSharedValue(0);
   const context = useSharedValue({ y: 0 });
-  const bottomSheetHeight = 600; // Height of the BottomSheet
 
   const gestureHandler = useAnimatedGestureHandler({
     onStart: (_, ctx) => {
@@ -21,17 +20,10 @@ const BottomSheet = ({ children, onClose }) => {
       translateY.value = ctx.y + event.translationY;
     },
     onEnd: () => {
-      // If dragged more than 50% of the BottomSheet height, close it
-      if (translateY.value > bottomSheetHeight / 2) {
-        translateY.value = withSpring(bottomSheetHeight, { damping: 50, stiffness: 400 }, () => {
-          // Call onClose after the animation is complete
-          if (onClose) {
-            onClose();
-          }
-        });
-      } else {
-        // Otherwise, snap back to the initial position
+      if (translateY.value > -300) {
         translateY.value = withSpring(0, { damping: 50, stiffness: 400 });
+      } else {
+        translateY.value = withSpring(-600, { damping: 50, stiffness: 400 });
       }
     },
   });
