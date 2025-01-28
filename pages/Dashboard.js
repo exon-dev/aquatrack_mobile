@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { Divider } from '@rneui/themed';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Entypo from '@expo/vector-icons/Entypo';
 import Navbar from '../modals/Navbar';
 import BottomSheet from '../components/BottomSheet';
+import { color } from '@rneui/base';
 
 const Dashboard = () => {
   const navigation = useNavigation();
@@ -36,6 +38,13 @@ const Dashboard = () => {
     setIsVisible(false); // Update the visibility state
   };
 
+  const tableData = [
+    { id: 1, name: 'John Doe', age: 28, city: 'New York', occupation: 'Engineer' },
+    { id: 2, name: 'Jane Smith', age: 34, city: 'Los Angeles', occupation: 'Designer' },
+    { id: 3, name: 'Sam Green', age: 45, city: 'Chicago', occupation: 'Teacher' },
+    { id: 4, name: 'Ella Brown', age: 30, city: 'Houston', occupation: 'Doctor' },
+  ];
+
   return (
     <View style={styles.container}>
       {/* Sticky Header */}
@@ -54,13 +63,76 @@ const Dashboard = () => {
           </Text>
           <Text style={styles.welcomeDescription}>Have a nice day!</Text>
         </View>
-        <View style={styles.transactions}>
+        {/* <View style={styles.transactions}>
           <Text style={styles.transactionsTitle}>Transactions</Text>
+        </View> */}
+        <View style={styles.transactionHeader}>
+          <View style={styles.headers}>
+            <Text style={styles.headersText}>Date</Text>
+          </View>
+          <View style={styles.headers}>
+            <Text style={styles.headersText}>Type</Text>
+          </View>
+          <View style={styles.headers}>
+            <Text style={styles.headersText}>Containers</Text>
+          </View>
         </View>
-        <View style={styles.transactionsContainer}>
-          <Text>Hello</Text>
+        <Divider />
+        {/* <View style={styles.hr} /> */}
+        {/* <View style={styles.tabContainer}>
+          <TouchableOpacity style={styles.tab}>
+            <Text>Transactions</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.tab}>
+            <Text>Lorem Ipsum</Text>
+          </TouchableOpacity>
+        </View> */}
+
+        <View style={styles.transaction}>
+          <View style={styles.transactionDesc}>
+            <Text style={styles.transactionText}>01-28-2025</Text>
+          </View>
+          <View style={styles.transactionDesc}>
+            <Text style={styles.transactionText}>Refill</Text>
+          </View>
+          <View style={styles.transactionDesc}>
+            <Text style={styles.transactionText}>12</Text>
+          </View>
         </View>
-        <View style={styles.cardContainer}>
+
+        {/* <View style={styles.transaction}>
+          <View style={styles.transactionDesc}>
+            <Text>01-28-2003</Text>
+          </View>
+          <View style={styles.transactionDesc}>
+            <Text>Refill</Text>
+          </View>
+          <View style={styles.transactionDesc}>
+            <Text>12</Text>
+          </View>
+        </View> */}
+
+        {/* <View style={styles.tableContainer}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.headerCell, styles.cell]}>Date</Text>
+            <Text style={[styles.headerCell, styles.cell]}>Transaction Type</Text>
+            <Text style={[styles.headerCell, styles.cell]}>No. of Containers</Text>
+            <Text style={[styles.headerCell, styles.cell]}>Delivery Location</Text>
+            <Text style={[styles.headerCell, styles.cell]}>Delivery Date</Text>
+          </View>
+
+          {tableData.map((row) => (
+            <View key={row.id} style={styles.row}>
+              <Text style={styles.cell}>{row.id}</Text>
+              <Text style={styles.cell}>{row.name}</Text>
+              <Text style={styles.cell}>{row.age}</Text>
+              <Text style={styles.cell}>{row.city}</Text>
+              <Text style={styles.cell}>{row.occupation}</Text>
+            </View>
+          ))}
+        </View> */}
+
+        {/* <View style={styles.cardContainer}>
           {[1, 2, 3].map((item, index) => (
             <View key={index} style={styles.cardContent}>
               <Image
@@ -82,7 +154,7 @@ const Dashboard = () => {
               </View>
             </View>
           ))}
-        </View>
+        </View> */}
         <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>
@@ -114,7 +186,7 @@ export default Dashboard;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: 'start',
     backgroundColor: '#F2F4FF',
     paddingTop: 20, // Add padding to avoid overlap with the sticky header
   },
@@ -158,7 +230,7 @@ const styles = StyleSheet.create({
   },
   welcomeBanner: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: 8,
   },
   welcomeText: {
     fontSize: 32,
@@ -169,16 +241,53 @@ const styles = StyleSheet.create({
   welcomeDescription: {
     color: '#8d8d8d',
   },
+
+  transactionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+
+  headers: {
+    flexDirection: 'row',
+    justifyContent: 'start',
+    width: 'auto',
+    paddingHorizontal: 12,
+  },
+
+  headersText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#8d8d8d',
+  },
+
   transactions: {
     width: '100%',
+    marginTop: 8,
   },
   transactionsTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#262626',
-    marginBottom: 8,
   },
-  transactionsContainer: {
+
+  // hr: {
+  //   width: '80%',
+  //   height: 1, // Thickness of the line
+  //   backgroundColor: 'black', // Color of the line
+  //   marginVertical: 10,
+  // },
+
+  tabContainer: {
+    flexDirection: "row",
+    width: "100%",
+    gap: 8,
+    marginTop: 16,
+  },
+
+  tab: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -187,16 +296,77 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    marginBottom: 16,
-    height: 50,
+    marginBottom: 8,
+    width: 'auto',
+    height: 30,
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 6,
   },
+
+  transaction: {
+    flexDirection: 'row',
+    justifyContent: 'start',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+    padding: 12,
+    // elevation: 3,
+    // shadowColor: '#000',
+    // shadowOpacity: 0.1,
+    // shadowRadius: 6,
+    // width: 'auto',
+    height: 'auto',
+    backgroundColor: '#fff',
+    borderRadius: 6,
+  },
+
+  transactionDesc: {
+    justifyContent: 'start',
+    width: '42%',
+  },
+
+  transactionText: {
+    color: '#262626',
+  },
+
+  tableContainer: {
+    width: '100%',
+  },
+
+  headerRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#000',
+    paddingVertical: 8,
+    backgroundColor: '#f2f2f2', // Header background color
+    width: '100%',
+  },
+
+  row: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingVertical: 8,
+    width: '100%',
+  },
+
+  headerCell: {
+    fontWeight: 'bold', // Make header text bold
+  },
+
+  cell: {
+    flex: 1, // Equal width for all columns
+    textAlign: 'center', // Center-align text
+    paddingHorizontal: 4, // Add some padding
+  },
+
   cardContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginTop: 9,
   },
+
   cardContent: {
     flexDirection: 'column',
     backgroundColor: 'white',

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Entypo } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
 const Navbar = ({ onScannedResult }) => {
@@ -77,7 +77,7 @@ const Navbar = ({ onScannedResult }) => {
           )}
         </TouchableOpacity>
         <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="person" size={24} color="#000" />
+          <Entypo name="add-to-list" size={24} color="#000" />
         </TouchableOpacity>
       </View>
     </View>
