@@ -66,9 +66,9 @@ const Navbar = ({ onScannedResult }) => {
   return (
     <View style={styles.container}>
       <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navItem}>
+        {/* <TouchableOpacity style={styles.navItem}>
           <Ionicons name="home" size={24} color="#000" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <TouchableOpacity style={styles.navItem} onPress={openCamera} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#000" />
@@ -76,9 +76,9 @@ const Navbar = ({ onScannedResult }) => {
             <Ionicons name="camera" size={24} color="#000" />
           )}
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
+        {/* <TouchableOpacity style={styles.navItem}>
           <Entypo name="add-to-list" size={24} color="#000" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </View>
   );
@@ -99,12 +99,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     position: 'absolute',
-    bottom: 0,
-    left: 20,
-    right: 20,
+    bottom: 0, // Add spacing from the bottom
+    alignSelf: 'center', // Center horizontally
     backgroundColor: '#fff',
-    borderRadius: 25,
-    paddingVertical: 15,
+    width: 50, // Limit the width
+    height: 50, // Set height equal to width for a circle
+    borderRadius: 40, // Half of width/height to make it circular
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
