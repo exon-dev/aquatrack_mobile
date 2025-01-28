@@ -7,9 +7,11 @@ import Entypo from '@expo/vector-icons/Entypo';
 import Navbar from '../modals/Navbar';
 import BottomSheet from '../components/BottomSheet';
 import { color } from '@rneui/base';
+import { supabase } from './auth/Login';
 
 const Dashboard = () => {
   const navigation = useNavigation();
+  const [sessionData, setSessionData] = useState(null);
   const [scannedResult, setScannedResult] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -19,14 +21,10 @@ const Dashboard = () => {
     console.log("Session: ", session)
 
     if (session) {
-      navigation.navigate('Dashboard');
+      setSessionData(JSON.parse(session));
     }
   };
-
-  useEffect(() => {
-    checkSession();
-  }, []);
-
+  
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('session');
@@ -53,11 +51,15 @@ const Dashboard = () => {
   };
 
   const tableData = [
-    {id: 1, date: "01-28-2025", name: 'John Doe', age: 28, city: 'In Progress', occupation: 'Engineer' },
-    {id: 2, date: "01-28-2025", name: 'Jane Smith', age: 34, city: 'Delivered', occupation: 'Designer' },
-    {id: 3, date: "01-28-2025", name: 'Sam Green', age: 45, city: 'Delivered', occupation: 'Teacher' },
-    {id: 4, date: "01-28-2025", name: 'Ella Brown', age: 30, city: 'In Progress', occupation: 'Doctor' },
+    {id: 1, date: "01-28-2025", name: 'Refill', age: 28, city: 'In Progress', occupation: 'Engineer' },
+    {id: 2, date: "01-28-2025", name: 'Delivery', age: 34, city: 'Delivered', occupation: 'Designer' },
+    {id: 3, date: "01-28-2025", name: 'Delivery', age: 45, city: 'Delivered', occupation: 'Teacher' },
+    {id: 4, date: "01-28-2025", name: 'Refill', age: 30, city: 'In Progress', occupation: 'Doctor' },
   ];
+
+  useEffect(() => {
+    checkSession();
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -72,9 +74,11 @@ const Dashboard = () => {
       {/* Scrollable Content */}
       <ScrollView contentContainerStyle={styles.innerContainer}>
         <View style={styles.welcomeBanner}>
-          <Text style={styles.welcomeText}>
-            Hello, <Text style={styles.name}>Cyrel</Text>!
-          </Text>
+          {sessionData && (
+            <Text style={styles.welcomeText}>
+              Hello, <Text style={styles.name}>{sessionData.first_name}</Text>!
+            </Text>
+          )}
           <Text style={styles.welcomeDescription}>Have a nice day!</Text>
         </View>
         {/* <View style={styles.transactions}>
