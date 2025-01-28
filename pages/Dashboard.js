@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { Divider } from '@rneui/themed';
 import { useNavigation, CommonActions } from '@react-navigation/native';
@@ -12,6 +12,20 @@ const Dashboard = () => {
   const navigation = useNavigation();
   const [scannedResult, setScannedResult] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
+
+  const checkSession = async () => {
+    const session = await AsyncStorage.getItem('session');
+
+    console.log("Session: ", session)
+
+    if (session) {
+      navigation.navigate('Dashboard');
+    }
+  };
+
+  useEffect(() => {
+    checkSession();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -39,10 +53,10 @@ const Dashboard = () => {
   };
 
   const tableData = [
-    { id: 1, name: 'John Doe', age: 28, city: 'New York', occupation: 'Engineer' },
-    { id: 2, name: 'Jane Smith', age: 34, city: 'Los Angeles', occupation: 'Designer' },
-    { id: 3, name: 'Sam Green', age: 45, city: 'Chicago', occupation: 'Teacher' },
-    { id: 4, name: 'Ella Brown', age: 30, city: 'Houston', occupation: 'Doctor' },
+    {id: 1, date: "01-28-2025", name: 'John Doe', age: 28, city: 'In Progress', occupation: 'Engineer' },
+    {id: 2, date: "01-28-2025", name: 'Jane Smith', age: 34, city: 'Delivered', occupation: 'Designer' },
+    {id: 3, date: "01-28-2025", name: 'Sam Green', age: 45, city: 'Delivered', occupation: 'Teacher' },
+    {id: 4, date: "01-28-2025", name: 'Ella Brown', age: 30, city: 'In Progress', occupation: 'Doctor' },
   ];
 
   return (
@@ -66,7 +80,7 @@ const Dashboard = () => {
         {/* <View style={styles.transactions}>
           <Text style={styles.transactionsTitle}>Transactions</Text>
         </View> */}
-        <View style={styles.transactionHeader}>
+        {/* <View style={styles.transactionHeader}>
           <View style={styles.headers}>
             <Text style={styles.headersText}>Date</Text>
           </View>
@@ -76,8 +90,11 @@ const Dashboard = () => {
           <View style={styles.headers}>
             <Text style={styles.headersText}>Containers</Text>
           </View>
-        </View>
-        <Divider />
+          <View style={styles.headers}>
+            <Text style={styles.headersText}>Status</Text>
+          </View>
+        </View> */}
+        {/* <Divider /> */}
         {/* <View style={styles.hr} /> */}
         {/* <View style={styles.tabContainer}>
           <TouchableOpacity style={styles.tab}>
@@ -88,7 +105,7 @@ const Dashboard = () => {
           </TouchableOpacity>
         </View> */}
 
-        <View style={styles.transaction}>
+        {/* <View style={styles.transaction}>
           <View style={styles.transactionDesc}>
             <Text style={styles.transactionText}>01-28-2025</Text>
           </View>
@@ -98,7 +115,10 @@ const Dashboard = () => {
           <View style={styles.transactionDesc}>
             <Text style={styles.transactionText}>12</Text>
           </View>
-        </View>
+          <View style={styles.transactionDesc}>
+            <Text style={styles.transactionText}>In Progress</Text>
+          </View>
+        </View> */}
 
         {/* <View style={styles.transaction}>
           <View style={styles.transactionDesc}>
@@ -112,25 +132,23 @@ const Dashboard = () => {
           </View>
         </View> */}
 
-        {/* <View style={styles.tableContainer}>
+        <View style={styles.tableContainer}>
           <View style={styles.headerRow}>
             <Text style={[styles.headerCell, styles.cell]}>Date</Text>
-            <Text style={[styles.headerCell, styles.cell]}>Transaction Type</Text>
+            <Text style={[styles.headerCell, styles.cell]}>Type</Text>
             <Text style={[styles.headerCell, styles.cell]}>No. of Containers</Text>
-            <Text style={[styles.headerCell, styles.cell]}>Delivery Location</Text>
-            <Text style={[styles.headerCell, styles.cell]}>Delivery Date</Text>
+            <Text style={[styles.headerCell, styles.cell]}>Status</Text>
           </View>
 
           {tableData.map((row) => (
-            <View key={row.id} style={styles.row}>
-              <Text style={styles.cell}>{row.id}</Text>
+            <TouchableOpacity key={row.id} style={styles.row}>
+              <Text style={styles.cell}>{row.date}</Text>
               <Text style={styles.cell}>{row.name}</Text>
               <Text style={styles.cell}>{row.age}</Text>
               <Text style={styles.cell}>{row.city}</Text>
-              <Text style={styles.cell}>{row.occupation}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
-        </View> */}
+        </View>
 
         {/* <View style={styles.cardContainer}>
           {[1, 2, 3].map((item, index) => (
@@ -252,7 +270,7 @@ const styles = StyleSheet.create({
 
   headers: {
     flexDirection: 'row',
-    justifyContent: 'start',
+    justifyContent: 'space-between',
     width: 'auto',
     paddingHorizontal: 12,
   },
@@ -305,10 +323,9 @@ const styles = StyleSheet.create({
 
   transaction: {
     flexDirection: 'row',
-    justifyContent: 'start',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: 8,
     padding: 12,
     // elevation: 3,
     // shadowColor: '#000',
@@ -321,8 +338,8 @@ const styles = StyleSheet.create({
   },
 
   transactionDesc: {
-    justifyContent: 'start',
-    width: '42%',
+    // justifyContent: 'space-between',
+
   },
 
   transactionText: {
@@ -331,14 +348,16 @@ const styles = StyleSheet.create({
 
   tableContainer: {
     width: '100%',
+    marginBottom: 16,
   },
 
   headerRow: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
     borderBottomWidth: 1,
     borderBottomColor: '#000',
     paddingVertical: 8,
-    backgroundColor: '#f2f2f2', // Header background color
+    // backgroundColor: '#f2f2f2', // Header background color
     width: '100%',
   },
 
@@ -352,6 +371,7 @@ const styles = StyleSheet.create({
 
   headerCell: {
     fontWeight: 'bold', // Make header text bold
+    color: '#8d8d8d', // Header text color
   },
 
   cell: {
