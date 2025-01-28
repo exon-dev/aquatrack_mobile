@@ -12,6 +12,7 @@ import { supabase } from './auth/Login';
 const Dashboard = () => {
   const navigation = useNavigation();
   const [sessionData, setSessionData] = useState(null);
+  const [transactionData, setTransactionData] = useState(null);
   const [scannedResult, setScannedResult] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -22,6 +23,24 @@ const Dashboard = () => {
 
     if (session) {
       setSessionData(JSON.parse(session));
+    }
+  };
+
+  const fetchTransactions = async () => {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('employee_id', sessionData.employee_id);
+
+    if (error) {
+      console.error('Error fetching transactions:', error);
+      return;
+    }
+
+    console.log('Transactions:', data);
+
+    if (data) {
+      setTransactionData(data);
     }
   };
   
@@ -58,7 +77,8 @@ const Dashboard = () => {
   ];
 
   useEffect(() => {
-    checkSession();
+    fetchTransactions();
+    // checkSession();
   }, []);
 
   return (
@@ -144,12 +164,12 @@ const Dashboard = () => {
             <Text style={[styles.headerCell, styles.cell]}>Status</Text>
           </View>
 
-          {tableData.map((row) => (
-            <TouchableOpacity key={row.id} style={styles.row}>
-              <Text style={styles.cell}>{row.date}</Text>
-              <Text style={styles.cell}>{row.name}</Text>
-              <Text style={styles.cell}>{row.age}</Text>
-              <Text style={styles.cell}>{row.city}</Text>
+          {transactionData.map((row, index) => (
+            <TouchableOpacity key={index} style={styles.row}>
+              <Text style={styles.cell}>{new Date(row.created_at).toLocaleDateString()}</Text>
+              <Text style={styles.cell}>{row.transaction_type}</Text>
+              <Text style={styles.cell}>{row.container_count}</Text>
+              <Text style={styles.cell}>{row.is_delivered ? "Delivered" : "In Progress"}</Text>
             </TouchableOpacity>
           ))}
         </View>

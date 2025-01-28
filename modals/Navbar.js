@@ -66,9 +66,9 @@ const Navbar = ({ onScannedResult }) => {
   return (
     <View style={styles.container}>
       <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navItem}>
+        {/* <TouchableOpacity style={styles.navItem}>
           <Ionicons name="home" size={24} color="#000" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
         <TouchableOpacity style={styles.navItem} onPress={openCamera} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#000" />
