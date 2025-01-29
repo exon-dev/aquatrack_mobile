@@ -55,11 +55,6 @@ const Dashboard = () => {
     transform: [{ translateY: translateY.value }],
   }));
 
-  const closeDrawer = () => {
-    translateY.value = withSpring(SCREEN_HEIGHT);
-    setTimeout(() => runOnJS(setIsVisible)(false), 300);
-  };
-
   const handleOutsidePress = () => {
     translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
     setTimeout(() => runOnJS(setIsVisible)(false), 300);
@@ -104,13 +99,19 @@ const Dashboard = () => {
   };
 
   const handleScannedResult = (result) => {
-    setScannedResult(result);
-    setIsVisible(true);
+    if (result) {
+      setIsVisible(true);
+      setScannedResult(result);
+      translateY.value = withSpring(MAX_TRANSLATE_Y);
+    }
   };
 
   const handleCloseBottomSheet = () => {
-    setScannedResult(null); // Clear the scanned result to hide the BottomSheet
-    setIsVisible(false); // Update the visibility state
+    translateY.value = withSpring(0, { damping: 10, stiffness: 50 }); // Add this line to trigger the animation
+    setTimeout(() => {
+      setScannedResult(null); // Clear the scanned result to hide the BottomSheet
+      setIsVisible(false);
+    }, 300);
   };
 
   useEffect(() => {
@@ -196,20 +197,45 @@ const Dashboard = () => {
           </GestureHandlerRootView>
         )}
 
-      {scannedResult && (
-        <BottomSheet onClose={handleCloseBottomSheet}>
-          <Text style={styles.resultText}>Scanned Result:</Text>
-          <Text style={styles.resultText}>
-            Predictions: {JSON.stringify(scannedResult.container_predictions, null, 2)}
-          </Text>
-          <Text style={styles.resultText}>Image:</Text>
-          <Image
-            style={styles.scannedImage}
-            // source={{
-            //   uri: ${scannedResult.image},
-            // }}
-          />
-        </BottomSheet>
+      {scannedResult && isVisible && (
+        // <BottomSheet onClose={handleCloseBottomSheet}>
+          // <Text style={styles.resultText}>Scanned Result:</Text>
+          // <Text style={styles.resultText}>
+          //   Predictions: {JSON.stringify(scannedResult.container_predictions, null, 2)}
+          // </Text>
+          // <Text style={styles.resultText}>Image:</Text>
+          // <Image
+          //   style={styles.scannedImage}
+          //   // source={{
+          //   //   uri: ${scannedResult.image},
+          //   // }}
+          // />
+        // </BottomSheet>
+        <GestureHandlerRootView style={styles.drawerContainer}>
+              <TouchableWithoutFeedback onPress={handleCloseBottomSheet}>
+                <View style={styles.overlay} />
+              </TouchableWithoutFeedback>
+              <PanGestureHandler
+                onGestureEvent={handleGesture}
+                onEnded={handleGestureEnd}
+              >
+                <Animated.View style={[styles.drawer, animatedStyle]}>
+                  <View style={styles.handle} />
+                  <Text style={styles.drawerContent}>Add your transaction here</Text>
+                  <Text style={styles.resultText}>Scanned Result:</Text>
+                  <Text style={styles.resultText}>
+                    Predictions: {JSON.stringify(scannedResult.container_predictions, null, 2)}
+                  </Text>
+                  <Text style={styles.resultText}>Image:</Text>
+                  <Image
+                    style={styles.scannedImage}
+                    // source={{
+                    //   uri: ${scannedResult.image},
+                    // }}
+                  />
+                </Animated.View>
+              </PanGestureHandler>
+          </GestureHandlerRootView>
       )}
 
     </View >
