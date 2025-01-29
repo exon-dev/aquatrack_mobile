@@ -1,7 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Dimensions, Pressable, TouchableWithoutFeedback } from 'react-native';
 import { Divider } from '@rneui/themed';
 import { useNavigation, CommonActions } from '@react-navigation/native';
+import { GestureHandlerRootView, PanGestureHandler } from "react-native-gesture-handler";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from "react-native-reanimated";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Entypo from '@expo/vector-icons/Entypo';
 import Navbar from '../modals/Navbar';
@@ -9,12 +16,16 @@ import BottomSheet from '../components/BottomSheet';
 import { color } from '@rneui/base';
 import { supabase } from './auth/Login';
 
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const MAX_TRANSLATE_Y = -SCREEN_HEIGHT * .8;
+
 const Dashboard = () => {
   const navigation = useNavigation();
   const [sessionData, setSessionData] = useState(null);
   const [transactionData, setTransactionData] = useState([]); // Initialize as an empty array
   const [scannedResult, setScannedResult] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
+  const translateY = useSharedValue(0);
 
   const checkSession = async () => {
     const session = await AsyncStorage.getItem('session');
@@ -38,6 +49,43 @@ const Dashboard = () => {
     if (data) {
       setTransactionData(data);
     }
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const closeDrawer = () => {
+    translateY.value = withSpring(SCREEN_HEIGHT);
+    setTimeout(() => runOnJS(setIsVisible)(false), 300);
+  };
+
+  const handleOutsidePress = () => {
+    translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
+    setTimeout(() => runOnJS(setIsVisible)(false), 300);
+  };
+
+  const handleGesture = (event) => {
+    const { translationY } = event.nativeEvent;
+
+    if (translationY > 0) {
+      translateY.value = withSpring(Math.max(translationY, MAX_TRANSLATE_Y));
+    }
+  };
+
+  const handleGestureEnd = (event) => {
+    const { translationY } = event.nativeEvent;
+
+    if (translationY > SCREEN_HEIGHT * 0.1) {
+      handleOutsidePress();
+    } else {
+      translateY.value = withSpring(MAX_TRANSLATE_Y);
+    }
+  };
+
+  const openDrawer = () => {
+    setIsVisible(true);
+    translateY.value = withSpring(MAX_TRANSLATE_Y);
   };
 
   const handleLogout = async () => {
@@ -76,7 +124,7 @@ const Dashboard = () => {
   }, [sessionData]);
 
   return (
-    <View style={styles.container}>
+    <View  style={styles.container}>
       {/* Sticky Header */}
       <View style={styles.header}>
         <Image source={require('../assets/menu_btn.png')} style={styles.menu} />
@@ -97,7 +145,7 @@ const Dashboard = () => {
         </View>
 
         <View style={styles.addListContainer}>
-          <TouchableOpacity style={styles.addItem}>
+          <TouchableOpacity style={styles.addItem} onPress={openDrawer}>
             <Entypo name="add-to-list" size={16} color="#fff" />
             <Text style={styles.addItemText}>Add Transaction</Text>
           </TouchableOpacity>
@@ -130,6 +178,24 @@ const Dashboard = () => {
         <Navbar onScannedResult={handleScannedResult} />
       </View>
 
+      {/* Bottom Drawer */}
+      {isVisible && (
+          <GestureHandlerRootView style={styles.drawerContainer}>
+              <TouchableWithoutFeedback onPress={handleOutsidePress}>
+                <View style={styles.overlay} />
+              </TouchableWithoutFeedback>
+              <PanGestureHandler
+                onGestureEvent={handleGesture}
+                onEnded={handleGestureEnd}
+              >
+                <Animated.View style={[styles.drawer, animatedStyle]}>
+                  <View style={styles.handle} />
+                  <Text style={styles.drawerContent}>Add your transaction here</Text>
+                </Animated.View>
+              </PanGestureHandler>
+          </GestureHandlerRootView>
+        )}
+
       {scannedResult && (
         <BottomSheet onClose={handleCloseBottomSheet}>
           <Text style={styles.resultText}>Scanned Result:</Text>
@@ -146,7 +212,7 @@ const Dashboard = () => {
         </BottomSheet>
       )}
 
-    </View>
+    </View >
   );
 };
 
@@ -158,6 +224,7 @@ const styles = StyleSheet.create({
     alignItems: 'start',
     backgroundColor: '#F2F4FF',
     paddingTop: 20, // Add padding to avoid overlap with the sticky header
+    zIndex: 5,
   },
   header: {
     flexDirection: 'row',
@@ -170,7 +237,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F4FF', // Match the background color
     paddingHorizontal: 20,
     paddingTop: 44,
-    zIndex: 10, // Ensure the header is above other content
+    zIndex: 5, // Ensure the header is above other content
   },
   menu: {
     width: 27.5,
@@ -210,7 +277,6 @@ const styles = StyleSheet.create({
   welcomeDescription: {
     color: '#8d8d8d',
   },
-
   transactionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -218,20 +284,17 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 8,
   },
-
   headers: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: 'auto',
     paddingHorizontal: 12,
   },
-
   headersText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#8d8d8d',
   },
-
   transactions: {
     width: '100%',
     marginTop: 8,
@@ -241,21 +304,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#262626',
   },
-
-  // hr: {
-  //   width: '80%',
-  //   height: 1, // Thickness of the line
-  //   backgroundColor: 'black', // Color of the line
-  //   marginVertical: 10,
-  // },
-
   tabContainer: {
     flexDirection: "row",
     width: "100%",
     gap: 8,
     marginTop: 16,
   },
-
   tab: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -271,37 +325,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 6,
   },
-
   transaction: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 8,
     padding: 12,
-    // elevation: 3,
-    // shadowColor: '#000',
-    // shadowOpacity: 0.1,
-    // shadowRadius: 6,
-    // width: 'auto',
     height: 'auto',
     backgroundColor: '#fff',
     borderRadius: 6,
   },
-
   transactionDesc: {
     // justifyContent: 'space-between',
   },
-
   transactionText: {
     color: '#262626',
   },
-
   addListContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     width: '100%',
   },
-
   addItem: {
     flexDirection: 'row',
     width: 'auto',
@@ -312,27 +356,24 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     backgroundColor: 'green',
   },
-
   addItemText: {
     color: '#fff',
     fontWeight: 'medium',
   },
-
   tableContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
     width: '100%',
-    marginBottom: 16,
+    marginVertical: 16,
   },
-
   headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     borderBottomWidth: 1,
     borderBottomColor: '#000',
     paddingVertical: 8,
-    // backgroundColor: '#f2f2f2', // Header background color
     width: '100%',
   },
-
   row: {
     flexDirection: 'row',
     borderBottomWidth: 1,
@@ -340,25 +381,21 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     width: '100%',
   },
-
   headerCell: {
     fontWeight: 'bold', // Make header text bold
     color: '#8d8d8d', // Header text color
   },
-
   cell: {
     flex: 1, // Equal width for all columns
     textAlign: 'center', // Center-align text
     paddingHorizontal: 4, // Add some padding
   },
-
   cardContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginTop: 9,
   },
-
   cardContent: {
     flexDirection: 'column',
     backgroundColor: 'white',
@@ -410,6 +447,69 @@ const styles = StyleSheet.create({
     bottom: 40,
     left: 0,
     right: 0,
+    zIndex: 5,
+  },
+
+  drawerContainer: {
+    flex: 1,
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+  },
+
+  content: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  button: {
+    backgroundColor: "green",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+  // overlay: {
+  //   ...StyleSheet.absoluteFillObject,
+  //   flex: 1,
+  //   backgroundColor: "rgba(0, 0, 0, 0.3)",
+  //   height: "100%", // Adjust this value as needed
+  //   zIndex: 10,
+  // },
+  overlay: {
+    flex: 1,
+    height: SCREEN_HEIGHT, // Adjust this value as needed
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+  },
+  drawer: {
+    position: "absolute",
+    top: SCREEN_HEIGHT, // Adjust this value as needed
+    width: "100%",
+    height: SCREEN_HEIGHT, // Adjust this value as needed
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    alignItems: "center",
+    padding: 16,
+    zIndex: 15,
+  },
+  handle: {
+    width: 60,
+    height: 5,
+    backgroundColor: "#ccc",
+    borderRadius: 3,
+    marginVertical: 8,
+  },
+  drawerContent: {
+    marginTop: 16,
+    fontSize: 18,
+    color: "#333",
   },
   resultText: {
     fontSize: 16,
