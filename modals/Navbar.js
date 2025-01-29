@@ -50,7 +50,7 @@ const Navbar = ({ onScannedResult }) => {
           // console.log('API Response:', responseData);
           onScannedResult({
             container_predictions: responseData.predictions,
-            image: responseData.prediction_image,
+            image: uri,
           }); // Pass the result to the parent component
         } catch (error) {
           console.log('Error sending image to API:', error);
