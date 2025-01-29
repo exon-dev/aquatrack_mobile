@@ -9,6 +9,7 @@ import {
 	Dimensions,
 	Pressable,
 	TouchableWithoutFeedback,
+  TextInput,
 } from "react-native";
 import { Divider } from "@rneui/themed";
 import { useNavigation, CommonActions } from "@react-navigation/native";
@@ -29,6 +30,7 @@ import { supabase } from "./auth/Login";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT * 0.8;
+const Transaction_MAX_TRANSLATE_Y = -SCREEN_HEIGHT * 0.4;
 
 const Dashboard = () => {
 	const navigation = useNavigation();
@@ -79,7 +81,7 @@ const Dashboard = () => {
 		const newY = initialY.value + translationY;
 
 		// Prevent the drawer from going above the maximum position
-		if (newY > MAX_TRANSLATE_Y) {
+		if (newY > Transaction_MAX_TRANSLATE_Y) {
 			translateY.value = newY;
 		}
 	};
@@ -91,14 +93,14 @@ const Dashboard = () => {
 			handleOutsidePress();
 			setScannedResult(null);
 		} else {
-			translateY.value = withSpring(MAX_TRANSLATE_Y);
+			translateY.value = withSpring(Transaction_MAX_TRANSLATE_Y);
 		}
 	};
 
 	const openDrawer = () => {
 		setIsVisible(true);
-		translateY.value = withSpring(MAX_TRANSLATE_Y);
-		initialY.value = MAX_TRANSLATE_Y; // Set the initial position when the drawer opens
+		translateY.value = withSpring(Transaction_MAX_TRANSLATE_Y);
+		initialY.value = Transaction_MAX_TRANSLATE_Y; // Set the initial position when the drawer opens
 	};
 
 	const handleLogout = async () => {
@@ -227,8 +229,25 @@ const Dashboard = () => {
 						<Animated.View style={[styles.drawer, animatedStyle]}>
 							<View style={styles.handle} />
 							<Text style={styles.drawerContent}>
-								Add your transaction here
+								Add transaction
 							</Text>
+              <View>
+                <Text>Transaction Type:</Text>
+                <TextInput
+                  style={{ height: 40, borderColor: 'gray', borderWidth: 1, borderRadius: 8, marginBottom: 10 }}
+                  placeholder="e.g Delivery, Refill"
+                />
+                <Text>Number of Containers:</Text>
+                <TextInput
+                  style={{ height: 40, borderColor: 'gray', borderWidth: 1, borderRadius: 8, marginBottom: 10 }}
+                  placeholder="Number of Containers"
+                />
+                <Text>Status:</Text>
+                <TextInput
+                  style={{ height: 40, borderColor: 'gray', borderWidth: 1, borderRadius: 8, marginBottom: 10 }}
+                  placeholder="e.g Delivered, In Progress"
+                />
+              </View>
 						</Animated.View>
 					</PanGestureHandler>
 				</GestureHandlerRootView>
@@ -278,6 +297,12 @@ const Dashboard = () => {
 								style={styles.scannedImage}
 								source={{ uri: scannedResult.image }}
 							/>
+              <TouchableOpacity style={styles.editButton}>
+                <Text style={styles.editText}>Edit Result</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.logoutButton}>
+                <Text style={styles.logoutButtonText}>Submit Result</Text>
+              </TouchableOpacity>
 						</Animated.View>
 					</PanGestureHandler>
 				</GestureHandlerRootView>
@@ -565,7 +590,7 @@ const styles = StyleSheet.create({
 		backgroundColor: "#fff",
 		borderTopLeftRadius: 16,
 		borderTopRightRadius: 16,
-		alignItems: "center",
+		alignItems: "start",
 		padding: 16,
 		zIndex: 15,
 	},
@@ -590,9 +615,12 @@ const styles = StyleSheet.create({
 		alignSelf: "center",
 	},
 	drawerContent: {
+    flexDirection: "column",
 		marginTop: 16,
 		fontSize: 18,
 		color: "#333",
+    alignItems: "start",
+    justifyContent: "start",
 	},
 	resultTextContainer: {
 		flexDirection: "column",
@@ -600,24 +628,24 @@ const styles = StyleSheet.create({
 		marginTop: 10,
 	},
 	resultText: {
-		fontSize: 32,
+		fontSize: 24,
 		fontWeight: "bold",
 		color: "#8D8D8D",
 	},
 	resultFixedText: {
-		fontSize: 24,
+		fontSize: 18,
     marginBottom: 10,
 		fontWeight: "400",
 		color: "green",
 	},
 	resultDmgText: {
-		fontSize: 24,
+		fontSize: 18,
     marginBottom: 10,
 		fontWeight: "400",
 		color: "red",
 	},
 	resultMssText: {
-		fontSize: 24,
+		fontSize: 18,
     marginBottom: 10,
 		fontWeight: "400",
 		color: "orange",
@@ -627,8 +655,21 @@ const styles = StyleSheet.create({
 		height: "40%",
 		borderRadius: 12,
 		marginTop: 10,
+		marginVertical: 20,
 		zIndex: 10,
 	},
+  editButton: {
+    backgroundColor: "#D0DADC",
+		padding: 15,
+		borderRadius: 5,
+		alignItems: "center",
+		width: "100%",
+		marginBottom: 10,
+  },
+  editText: {
+    color: "#6d6d6d",
+    fontWeight: "bold",
+  },
 	logoutButton: {
 		backgroundColor: "#00BCD4",
 		padding: 15,
