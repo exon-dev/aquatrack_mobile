@@ -24,6 +24,7 @@ const Dashboard = () => {
   const [scannedResult, setScannedResult] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const translateY = useSharedValue(0);
+  const initialY = useSharedValue(0);
 
   const checkSession = async () => {
     const session = await AsyncStorage.getItem('session');
@@ -61,8 +62,12 @@ const Dashboard = () => {
   const handleGesture = (event) => {
     const { translationY } = event.nativeEvent;
 
-    if (translationY > 0) {
-      translateY.value = withSpring(Math.max(translationY, MAX_TRANSLATE_Y));
+    // Calculate the new position based on the initial position and translation
+    const newY = initialY.value + translationY;
+
+    // Prevent the drawer from going above the maximum position
+    if (newY > MAX_TRANSLATE_Y) {
+      translateY.value = newY;
     }
   };
 
