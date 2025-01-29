@@ -12,8 +12,6 @@ import Animated, {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Entypo from '@expo/vector-icons/Entypo';
 import Navbar from '../modals/Navbar';
-import BottomSheet from '../components/BottomSheet';
-import { color } from '@rneui/base';
 import { supabase } from './auth/Login';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -22,7 +20,7 @@ const MAX_TRANSLATE_Y = -SCREEN_HEIGHT * .8;
 const Dashboard = () => {
   const navigation = useNavigation();
   const [sessionData, setSessionData] = useState(null);
-  const [transactionData, setTransactionData] = useState([]); // Initialize as an empty array
+  const [transactionData, setTransactionData] = useState([]);
   const [scannedResult, setScannedResult] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const translateY = useSharedValue(0);
@@ -73,6 +71,7 @@ const Dashboard = () => {
 
     if (translationY > SCREEN_HEIGHT * 0.1) {
       handleOutsidePress();
+      setScannedResult(null);
     } else {
       translateY.value = withSpring(MAX_TRANSLATE_Y);
     }
@@ -106,7 +105,17 @@ const Dashboard = () => {
     }
   };
 
-  const handleCloseBottomSheet = () => {
+  const handleScannedGestureEnd = (event) => {
+    const { translationY } = event.nativeEvent;
+
+    if (translationY > SCREEN_HEIGHT * 0.1) {
+      handleCloseScannedResult();
+    } else {
+      translateY.value = withSpring(MAX_TRANSLATE_Y);
+    }
+  };
+
+  const handleCloseScannedResult = () => {
     translateY.value = withSpring(0, { damping: 10, stiffness: 50 }); // Add this line to trigger the animation
     setTimeout(() => {
       setScannedResult(null); // Clear the scanned result to hide the BottomSheet
@@ -179,7 +188,7 @@ const Dashboard = () => {
         <Navbar onScannedResult={handleScannedResult} />
       </View>
 
-      {/* Bottom Drawer */}
+      {/* Transactiton Bottom Drawer */}
       {isVisible && (
           <GestureHandlerRootView style={styles.drawerContainer}>
               <TouchableWithoutFeedback onPress={handleOutsidePress}>
@@ -197,31 +206,18 @@ const Dashboard = () => {
           </GestureHandlerRootView>
         )}
 
+      {/* Scanned Result Bottom Drawer */}
       {scannedResult && isVisible && (
-        // <BottomSheet onClose={handleCloseBottomSheet}>
-          // <Text style={styles.resultText}>Scanned Result:</Text>
-          // <Text style={styles.resultText}>
-          //   Predictions: {JSON.stringify(scannedResult.container_predictions, null, 2)}
-          // </Text>
-          // <Text style={styles.resultText}>Image:</Text>
-          // <Image
-          //   style={styles.scannedImage}
-          //   // source={{
-          //   //   uri: ${scannedResult.image},
-          //   // }}
-          // />
-        // </BottomSheet>
         <GestureHandlerRootView style={styles.drawerContainer}>
-              <TouchableWithoutFeedback onPress={handleCloseBottomSheet}>
+              <TouchableWithoutFeedback onPress={handleCloseScannedResult}>
                 <View style={styles.overlay} />
               </TouchableWithoutFeedback>
               <PanGestureHandler
                 onGestureEvent={handleGesture}
-                onEnded={handleGestureEnd}
+                onEnded={handleScannedGestureEnd}
               >
-                <Animated.View style={[styles.drawer, animatedStyle]}>
+                <Animated.View style={[styles.scannedResultDrawer, animatedStyle]}>
                   <View style={styles.handle} />
-                  <Text style={styles.drawerContent}>Add your transaction here</Text>
                   <Text style={styles.resultText}>Scanned Result:</Text>
                   <Text style={styles.resultText}>
                     Predictions: {JSON.stringify(scannedResult.container_predictions, null, 2)}
@@ -525,12 +521,25 @@ const styles = StyleSheet.create({
     padding: 16,
     zIndex: 15,
   },
+  scannedResultDrawer: {
+    position: "absolute",
+    top: SCREEN_HEIGHT, // Adjust this value as needed
+    width: "100%",
+    height: SCREEN_HEIGHT, // Adjust this value as needed
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    alignItems: "start",
+    padding: 16,
+    zIndex: 15,
+  },
   handle: {
     width: 60,
     height: 5,
     backgroundColor: "#ccc",
     borderRadius: 3,
     marginVertical: 8,
+    alignSelf: 'center',
   },
   drawerContent: {
     marginTop: 16,
