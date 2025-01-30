@@ -41,7 +41,7 @@ const Dashboard = () => {
 	const navigation = useNavigation();
 	const [sessionData, setSessionData] = useState(null);
 	const [transactionData, setTransactionData] = useState([]);
-  const [selectedTransactionId, setSelectedTransactionId] = useState(null);
+	const [selectedTransactionId, setSelectedTransactionId] = useState(null);
 	const [scannedResult, setScannedResult] = useState(null);
 	const [isVisible, setIsVisible] = useState(false);
 	const [isEditVisible, setIsEditVisible] = useState(false);
@@ -155,83 +155,83 @@ const Dashboard = () => {
 	};
 
 	const handleEditDrawer = (transaction) => {
-    if (transaction) {
-      setTransactionFormData({
-        transaction_type: transaction.transaction_type,
-        container_count: transaction.container_count,
-        is_delivered: transaction.is_delivered,
-      });
-      // Store the transaction ID in state or a ref for later use
-      setSelectedTransactionId(transaction.transaction_id);
-    }
-    setIsEditVisible(true);
-    translateY.value = withSpring(Transaction_MAX_TRANSLATE_Y);
-    initialY.value = Transaction_MAX_TRANSLATE_Y;
-  };
-  
-  const handleEditTransaction = async () => {
-    if (
-      !transactionFormData.transaction_type ||
-      transactionFormData.container_count === null ||
-      transactionFormData.container_count === undefined ||
-      isNaN(transactionFormData.container_count)
-    ) {
-      alert("Please fill in all fields with valid values");
-      return;
-    }
-  
-    console.log("Editing transaction:", {
-      ...transactionFormData,
-      transaction_id: selectedTransactionId, // Use the stored transaction ID
-    });
-  
-    try {
-      const { error } = await supabase
-        .from("transactions")
-        .update({
-          transaction_type: transactionFormData.transaction_type,
-          container_count: transactionFormData.container_count,
-          is_delivered: transactionFormData.is_delivered,
-        })
-        .eq("transaction_id", selectedTransactionId) // Use the stored transaction ID
-        .eq("employee_id", sessionData.employee_id)
-        .eq("station_id", sessionData.station_id);
-  
-      if (error) {
-        console.error("Supabase error:", error);
-        throw new Error(error.message || "Unexpected API response format");
-      } else {
-        console.log("Transaction edited successfully!");
-        setTimeout(() => runOnJS(setIsEditVisible)(false), 2000);
-        if (setIsEditVisible === false) {
-          translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
-          Toast.show({
-            type: "success",
-            text1: "Success",
-            text2: "Transaction edited successfully!",
-            visibilityTime: 2000,
-          });
-  
-          // Reset form after successful submission
-          setTransactionFormData({
-            transaction_type: "",
-            container_count: null,
-            is_delivered: false,
-          });
-          setSelectedTransactionId(null); // Clear the stored transaction ID
-        }
-      }
-    } catch (error) {
-      console.error("Unexpected error:", error);
-  
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: error.message || "Editing went wrong. Please try again.",
-        visibilityTime: 3000,
-      });
-    }
-  };
+		if (transaction) {
+			setTransactionFormData({
+				transaction_type: transaction.transaction_type,
+				container_count: transaction.container_count,
+				is_delivered: transaction.is_delivered,
+			});
+			// Store the transaction ID in state or a ref for later use
+			setSelectedTransactionId(transaction.transaction_id);
+		}
+		setIsEditVisible(true);
+		translateY.value = withSpring(Transaction_MAX_TRANSLATE_Y);
+		initialY.value = Transaction_MAX_TRANSLATE_Y;
+	};
+
+	const handleEditTransaction = async () => {
+		if (
+			!transactionFormData.transaction_type ||
+			transactionFormData.container_count === null ||
+			transactionFormData.container_count === undefined ||
+			isNaN(transactionFormData.container_count)
+		) {
+			alert("Please fill in all fields with valid values");
+			return;
+		}
+
+		console.log("Editing transaction:", {
+			...transactionFormData,
+			transaction_id: selectedTransactionId, // Use the stored transaction ID
+		});
+
+		try {
+			const { error } = await supabase
+				.from("transactions")
+				.update({
+					transaction_type: transactionFormData.transaction_type,
+					container_count: transactionFormData.container_count,
+					is_delivered: transactionFormData.is_delivered,
+				})
+				.eq("transaction_id", selectedTransactionId) // Use the stored transaction ID
+				.eq("employee_id", sessionData.employee_id)
+				.eq("station_id", sessionData.station_id);
+
+			if (error) {
+				console.error("Supabase error:", error);
+				throw new Error(error.message || "Unexpected API response format");
+			} else {
+				console.log("Transaction edited successfully!");
+				setTimeout(() => runOnJS(setIsEditVisible)(false), 2000);
+				if (setIsEditVisible === false) {
+					translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
+					Toast.show({
+						type: "success",
+						text1: "Success",
+						text2: "Transaction edited successfully!",
+						visibilityTime: 2000,
+					});
+
+					// Reset form after successful submission
+					setTransactionFormData({
+						transaction_type: "",
+						container_count: null,
+						is_delivered: false,
+					});
+					setSelectedTransactionId(null); // Clear the stored transaction ID
+				}
+			}
+		} catch (error) {
+			console.error("Unexpected error:", error);
+
+			Toast.show({
+				type: "error",
+				text1: "Error",
+				text2: error.message || "Editing went wrong. Please try again.",
+				visibilityTime: 3000,
+			});
+		}
+	};
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: translateY.value }],
@@ -341,10 +341,14 @@ const Dashboard = () => {
 			<Toast />
 			{/* Sticky Header */}
 			<View style={styles.header}>
-				<Image source={require("../assets/menu_btn.png")} style={styles.menu} />
-				<View style={styles.avatar}>
-					<Text style={styles.avatarText}>JD</Text>
-				</View>
+				{/* <Image source={require("../assets/menu_btn.png")} style={styles.menu} /> */}
+        {sessionData && (
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {sessionData.first_name && sessionData.last_name ? `${sessionData.first_name[0]}${sessionData.last_name[0]}` : "NA"}
+            </Text>
+          </View>
+        )}
 			</View>
 
 			{/* Scrollable Content */}
@@ -863,7 +867,7 @@ const styles = StyleSheet.create({
 	},
 	row: {
 		flexDirection: "row",
-    alignItems: "center",
+		alignItems: "center",
 		borderBottomWidth: 1,
 		borderBottomColor: "#ddd",
 		padding: 8,
