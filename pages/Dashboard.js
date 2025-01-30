@@ -29,7 +29,7 @@ import DropDownPicker from "react-native-dropdown-picker";
 import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Entypo from "@expo/vector-icons/Entypo";
-import Feather from '@expo/vector-icons/Feather';
+import Feather from "@expo/vector-icons/Feather";
 import Navbar from "../modals/Navbar";
 import { supabase } from "./auth/Login";
 
@@ -41,8 +41,10 @@ const Dashboard = () => {
 	const navigation = useNavigation();
 	const [sessionData, setSessionData] = useState(null);
 	const [transactionData, setTransactionData] = useState([]);
+  const [selectedTransactionId, setSelectedTransactionId] = useState(null);
 	const [scannedResult, setScannedResult] = useState(null);
 	const [isVisible, setIsVisible] = useState(false);
+	const [isEditVisible, setIsEditVisible] = useState(false);
 	const [isResultVisible, setIsResultVisible] = useState(false);
 	const translateY = useSharedValue(0);
 	const initialY = useSharedValue(0);
@@ -55,28 +57,22 @@ const Dashboard = () => {
 	]);
 	const [transactionFormData, setTransactionFormData] = useState({
 		transaction_type: "",
-		container_count: 0,
+		container_count: null,
 		is_delivered: false,
 	});
-
-	// const handleInputChange = (name, value) => {
-	//   setTransactionFormData({
-	//     ...transactionFormData, [name]: value
-	//   });
-	// };
-
-	const handleInputChange = (field, value) => {
-		setTransactionFormData((prevState) => ({
-			...prevState,
-			[field]: value,
-		}));
-	};
 
 	const checkSession = async () => {
 		const session = await AsyncStorage.getItem("session");
 		if (session) {
 			setSessionData(JSON.parse(session));
 		}
+	};
+
+	const handleInputChange = (field, value) => {
+		setTransactionFormData((prevState) => ({
+			...prevState,
+			[field]: value,
+		}));
 	};
 
 	const fetchTransactions = async () => {
@@ -98,51 +94,144 @@ const Dashboard = () => {
 	};
 
 	const handleAddTransaction = async () => {
+		if (
+			!transactionFormData.transaction_type ||
+			transactionFormData.container_count === null ||
+			transactionFormData.container_count === undefined ||
+			isNaN(transactionFormData.container_count)
+		) {
+			alert("Please fill in all fields with valid values");
+			return;
+		}
+
+		console.log("Submitting transaction:", {
+			...transactionFormData,
+			employee_id: sessionData.employee_id,
+			station_id: sessionData.station_id,
+		});
+
 		try {
-			const { error } = await supabase
-        .from("transactions")
-        .insert([{
-				...transactionFormData,
-				employee_id: sessionData.employee_id,
-				station_id: sessionData.station_id,
-			}]);
+			const { error } = await supabase.from("transactions").insert([
+				{
+					...transactionFormData,
+					employee_id: sessionData.employee_id,
+					station_id: sessionData.station_id,
+				},
+			]);
 
 			if (error) {
-				throw new Error("Unexpected API response format");
+				console.error("Supabase error:", error);
+				throw new Error(error.message || "Unexpected API response format");
 			} else {
-        console.log("Transaction added successfully!");
-        setTimeout(() => runOnJS(setIsVisible)(false), 2000);
-        if (setIsVisible === false) {
-          translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
-          Toast.show({
-            type: "success",
-            text1: "Success",
-            text2: "Transaction added successfully!",
-            visibilityTime: 2000,
-          });
-          
-          // Reset form after successful submission
-          setTransactionFormData({
-            transaction_type: "",
-            container_count: "",
-            is_delivered: false,
-          });
-        }
+				console.log("Transaction added successfully!");
+				setTimeout(() => runOnJS(setIsVisible)(false), 2000);
+				if (setIsVisible === false) {
+					translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
+					Toast.show({
+						type: "success",
+						text1: "Success",
+						text2: "Transaction added successfully!",
+						visibilityTime: 2000,
+					});
 
-      }
-
-
+					// Reset form after successful submission
+					setTransactionFormData({
+						transaction_type: "",
+						container_count: null,
+						is_delivered: false,
+					});
+				}
+			}
 		} catch (error) {
 			console.error("Unexpected error:", error);
 
 			Toast.show({
 				type: "error",
 				text1: "Error",
-				text2: error.message || "Something went wrong. Please try again.",
+				text2: error.message || "Adding went wrong. Please try again.",
 				visibilityTime: 3000,
 			});
 		}
 	};
+
+	const handleEditDrawer = (transaction) => {
+    if (transaction) {
+      setTransactionFormData({
+        transaction_type: transaction.transaction_type,
+        container_count: transaction.container_count,
+        is_delivered: transaction.is_delivered,
+      });
+      // Store the transaction ID in state or a ref for later use
+      setSelectedTransactionId(transaction.transaction_id);
+    }
+    setIsEditVisible(true);
+    translateY.value = withSpring(Transaction_MAX_TRANSLATE_Y);
+    initialY.value = Transaction_MAX_TRANSLATE_Y;
+  };
+  
+  const handleEditTransaction = async () => {
+    if (
+      !transactionFormData.transaction_type ||
+      transactionFormData.container_count === null ||
+      transactionFormData.container_count === undefined ||
+      isNaN(transactionFormData.container_count)
+    ) {
+      alert("Please fill in all fields with valid values");
+      return;
+    }
+  
+    console.log("Editing transaction:", {
+      ...transactionFormData,
+      transaction_id: selectedTransactionId, // Use the stored transaction ID
+    });
+  
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .update({
+          transaction_type: transactionFormData.transaction_type,
+          container_count: transactionFormData.container_count,
+          is_delivered: transactionFormData.is_delivered,
+        })
+        .eq("transaction_id", selectedTransactionId) // Use the stored transaction ID
+        .eq("employee_id", sessionData.employee_id)
+        .eq("station_id", sessionData.station_id);
+  
+      if (error) {
+        console.error("Supabase error:", error);
+        throw new Error(error.message || "Unexpected API response format");
+      } else {
+        console.log("Transaction edited successfully!");
+        setTimeout(() => runOnJS(setIsEditVisible)(false), 2000);
+        if (setIsEditVisible === false) {
+          translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
+          Toast.show({
+            type: "success",
+            text1: "Success",
+            text2: "Transaction edited successfully!",
+            visibilityTime: 2000,
+          });
+  
+          // Reset form after successful submission
+          setTransactionFormData({
+            transaction_type: "",
+            container_count: null,
+            is_delivered: false,
+          });
+          setSelectedTransactionId(null); // Clear the stored transaction ID
+        }
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+  
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: error.message || "Editing went wrong. Please try again.",
+        visibilityTime: 3000,
+      });
+    }
+  };
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: translateY.value }],
@@ -151,7 +240,15 @@ const Dashboard = () => {
 	const handleOutsidePress = () => {
 		translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
 		setTimeout(() => runOnJS(setIsVisible)(false), 300);
+		setTimeout(() => runOnJS(setIsEditVisible)(false), 300);
 		setTimeout(() => runOnJS(setIsResultVisible)(false), 300);
+
+		// Reset form after successful submission
+		setTransactionFormData({
+			transaction_type: "",
+			container_count: null,
+			is_delivered: false,
+		});
 	};
 
 	const handleGesture = (event) => {
@@ -225,9 +322,9 @@ const Dashboard = () => {
 		}
 	};
 
-  const handleRefresh = () => {
-    fetchTransactions()
-  };
+	const handleRefresh = () => {
+		fetchTransactions();
+	};
 
 	useEffect(() => {
 		checkSession(); // Fetch session data on component mount
@@ -267,7 +364,7 @@ const Dashboard = () => {
 						<Text style={styles.addItemText}>Add Transaction</Text>
 					</TouchableOpacity>
 					<TouchableOpacity style={styles.refresh} onPress={handleRefresh}>
-            <Feather name="refresh-cw" size={16} color="gray" />
+						<Feather name="refresh-cw" size={16} color="gray" />
 						<Text style={styles.refreshText}>Refresh</Text>
 					</TouchableOpacity>
 				</View>
@@ -282,13 +379,30 @@ const Dashboard = () => {
 						<Text style={[styles.headerCell, styles.cell]}>Status</Text>
 					</View>
 					{transactionData.map((row, index) => (
-						<TouchableOpacity key={index} style={styles.row}>
+						<TouchableOpacity
+							key={index}
+							style={styles.row}
+							onPress={() => handleEditDrawer(row)}
+						>
 							<Text style={styles.cell}>
 								{new Date(row.created_at).toLocaleDateString()}
 							</Text>
 							<Text style={styles.cell}>{row.transaction_type}</Text>
 							<Text style={styles.cell}>{row.container_count}</Text>
-							<Text style={styles.cell}>
+							<Text
+								style={[
+									styles.cell,
+									{
+										backgroundColor: row.is_delivered ? "green" : "orange",
+										color: "white", // Ensure text is visible
+										paddingVertical: 5,
+										paddingHorizontal: 8,
+										borderRadius: 999,
+										textAlign: "center",
+										fontWeight: "bold",
+									},
+								]}
+							>
 								{row.is_delivered ? "Delivered" : "In Progress"}
 							</Text>
 						</TouchableOpacity>
@@ -304,7 +418,7 @@ const Dashboard = () => {
 				<Navbar onScannedResult={handleScannedResult} />
 			</View>
 
-			{/* Transactiton Bottom Drawer */}
+			{/* Add Transactiton Bottom Drawer */}
 			{isVisible && (
 				<GestureHandlerRootView style={styles.drawerContainer}>
 					<TouchableWithoutFeedback onPress={handleOutsidePress}>
@@ -334,13 +448,15 @@ const Dashboard = () => {
 										]}
 										setOpen={setOpenType}
 										setValue={(callback) =>
-                      setTransactionFormData((prevState) => ({
-                        ...prevState,
-                        transaction_type: callback(prevState.transaction_type), // Ensure the value is updated
-                      }))
-                    }
+											setTransactionFormData((prevState) => ({
+												...prevState,
+												transaction_type: callback(prevState.transaction_type), // Ensure the value is updated
+											}))
+										}
 										setItems={setItems}
-                    onChangeText={(text) => handleInputChange("transaction_type", text)}
+										onChangeText={(text) =>
+											handleInputChange("transaction_type", text)
+										}
 										style={{
 											height: 40,
 											paddingHorizontal: 12,
@@ -360,23 +476,18 @@ const Dashboard = () => {
 											borderRadius: 8,
 											marginBottom: 10,
 										}}
-										onChangeText={(text) =>
-											handleInputChange("container_count", text)
+										value={transactionFormData.container_count?.toString()} // Ensure it's a string
+										onChangeText={
+											(text) =>
+												handleInputChange(
+													"container_count",
+													parseInt(text.replace(/[^0-9]/g, "")) || 0
+												) // Ensure it's a number
 										}
 										placeholder="Number of Containers"
+										keyboardType="numeric" // Ensure numeric keyboard is shown
 									/>
 									<Text>Status {"(e.g Delivered, In Progress)"}:</Text>
-									{/* <TextInput
-										style={{
-											height: 40,
-											paddingHorizontal: 12,
-											borderColor: "gray",
-											borderWidth: 1,
-											borderRadius: 8,
-											marginBottom: 18,
-										}}
-										placeholder="e.g Delivered, In Progress"
-									/> */}
 									<DropDownPicker
 										open={open}
 										value={transactionFormData.is_delivered} // Assuming this is a Boolean (true/false)
@@ -386,11 +497,11 @@ const Dashboard = () => {
 										]}
 										setOpen={setOpen}
 										setValue={(callback) =>
-                      setTransactionFormData((prevState) => ({
-                        ...prevState,
-                        is_delivered: callback(prevState.is_delivered), // Ensure the value is updated
-                      }))
-                    }
+											setTransactionFormData((prevState) => ({
+												...prevState,
+												is_delivered: callback(prevState.is_delivered), // Ensure the value is updated
+											}))
+										}
 										setItems={setItems}
 										style={{
 											height: 40,
@@ -407,6 +518,113 @@ const Dashboard = () => {
 									onPress={handleAddTransaction}
 								>
 									<Text style={styles.logoutButtonText}>Add Transaction</Text>
+								</TouchableOpacity>
+							</Animated.View>
+						</KeyboardAvoidingView>
+					</PanGestureHandler>
+				</GestureHandlerRootView>
+			)}
+
+			{/* Edit Transactiton Bottom Drawer */}
+			{isEditVisible && (
+				<GestureHandlerRootView style={styles.drawerContainer}>
+					<TouchableWithoutFeedback onPress={handleOutsidePress}>
+						<View style={styles.overlay} />
+					</TouchableWithoutFeedback>
+					<PanGestureHandler
+						onGestureEvent={handleGesture}
+						onEnded={handleGestureEnd}
+					>
+						<KeyboardAvoidingView
+							behavior={
+								Platform.OS === "android" || "ios" ? "padding" : "height"
+							}
+							style={styles.keyboardAvoidingView}
+						>
+							<Animated.View style={[styles.drawer, animatedStyle]}>
+								<View style={styles.handle} />
+								<Text style={styles.drawerContent}>Add transaction</Text>
+								<View>
+									<Text>Transaction Type:</Text>
+									<DropDownPicker
+										open={openType}
+										value={transactionFormData.transaction_type} // Assuming this is a Boolean (true/false)
+										items={[
+											{ label: "Delivery", value: "Delivery" },
+											{ label: "Refill", value: "Refill" },
+										]}
+										setOpen={setOpenType}
+										setValue={(callback) =>
+											setTransactionFormData((prevState) => ({
+												...prevState,
+												transaction_type: callback(prevState.transaction_type), // Ensure the value is updated
+											}))
+										}
+										setItems={setItems}
+										onChangeText={(text) =>
+											handleInputChange("transaction_type", text)
+										}
+										style={{
+											height: 40,
+											paddingHorizontal: 12,
+											borderColor: "gray",
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 28,
+										}}
+									/>
+									<Text>Number of Containers:</Text>
+									<TextInput
+										style={{
+											height: 40,
+											paddingHorizontal: 12,
+											borderColor: "gray",
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 10,
+										}}
+										value={transactionFormData.container_count?.toString()} // Ensure it's a string
+										onChangeText={
+											(text) =>
+												handleInputChange(
+													"container_count",
+													parseInt(text.replace(/[^0-9]/g, "")) || 0
+												) // Ensure it's a number
+										}
+										placeholder="Number of Containers"
+										keyboardType="numeric" // Ensure numeric keyboard is shown
+									/>
+									<Text>Status {"(e.g Delivered, In Progress)"}:</Text>
+									<DropDownPicker
+										open={open}
+										value={transactionFormData.is_delivered} // Assuming this is a Boolean (true/false)
+										items={[
+											{ label: "Delivered", value: true }, // Boolean true
+											{ label: "In Progress", value: false }, // Boolean false
+										]}
+										setOpen={setOpen}
+										setValue={(callback) =>
+											setTransactionFormData((prevState) => ({
+												...prevState,
+												is_delivered: callback(prevState.is_delivered), // Ensure the value is updated
+											}))
+										}
+										setItems={setItems}
+										style={{
+											height: 40,
+											paddingHorizontal: 12,
+											borderColor: "gray",
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 28,
+										}}
+									/>
+								</View>
+								<TouchableOpacity
+									style={styles.logoutButton}
+									onPress={handleEditTransaction}
+								>
+									<Text style={styles.logoutButtonText}>Edit Transaction</Text>
 								</TouchableOpacity>
 							</Animated.View>
 						</KeyboardAvoidingView>
@@ -599,9 +817,9 @@ const styles = StyleSheet.create({
 	},
 	addListContainer: {
 		flexDirection: "column",
-    alignItems: "flex-end",
+		alignItems: "flex-end",
 		justifyContent: "flex-end",
-    gap: 18,
+		gap: 18,
 	},
 	addItem: {
 		flexDirection: "row",
@@ -617,23 +835,23 @@ const styles = StyleSheet.create({
 		color: "#fff",
 		fontWeight: "medium",
 	},
-  refresh: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    justifyContent: "flex-end",
-    width: "100%",
-  },
-  refreshText: {
-    color: "gray",
-    fontWeight: "medium",
-  },
+	refresh: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: 4,
+		justifyContent: "flex-end",
+		width: "100%",
+	},
+	refreshText: {
+		color: "gray",
+		fontWeight: "medium",
+	},
 	tableContainer: {
 		backgroundColor: "#fff",
 		borderRadius: 12,
 		width: "100%",
 		marginBottom: 16,
-    marginTop: 10,
+		marginTop: 10,
 	},
 	headerRow: {
 		flexDirection: "row",
@@ -645,9 +863,10 @@ const styles = StyleSheet.create({
 	},
 	row: {
 		flexDirection: "row",
+    alignItems: "center",
 		borderBottomWidth: 1,
 		borderBottomColor: "#ddd",
-		paddingVertical: 8,
+		padding: 8,
 		width: "100%",
 	},
 	headerCell: {
