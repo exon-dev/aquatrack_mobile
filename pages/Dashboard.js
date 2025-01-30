@@ -9,7 +9,9 @@ import {
 	Dimensions,
 	Pressable,
 	TouchableWithoutFeedback,
-  TextInput,
+	TextInput,
+	KeyboardAvoidingView,
+	Platform,
 } from "react-native";
 import { Divider } from "@rneui/themed";
 import { useNavigation, CommonActions } from "@react-navigation/native";
@@ -23,6 +25,8 @@ import Animated, {
 	withSpring,
 	runOnJS,
 } from "react-native-reanimated";
+import DropDownPicker from "react-native-dropdown-picker";
+import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Entypo from "@expo/vector-icons/Entypo";
 import Navbar from "../modals/Navbar";
@@ -38,8 +42,34 @@ const Dashboard = () => {
 	const [transactionData, setTransactionData] = useState([]);
 	const [scannedResult, setScannedResult] = useState(null);
 	const [isVisible, setIsVisible] = useState(false);
+	const [isResultVisible, setIsResultVisible] = useState(false);
 	const translateY = useSharedValue(0);
 	const initialY = useSharedValue(0);
+	const [open, setOpen] = useState(false);
+	const [openType, setOpenType] = useState(false);
+	const [value, setValue] = useState(null);
+	const [items, setItems] = useState([
+		{ label: "Delivered", value: "true" },
+		{ label: "In Progress", value: "false" },
+	]);
+	const [transactionFormData, setTransactionFormData] = useState({
+		transaction_type: "",
+		container_count: 0,
+		is_delivered: false,
+	});
+
+	// const handleInputChange = (name, value) => {
+	//   setTransactionFormData({
+	//     ...transactionFormData, [name]: value
+	//   });
+	// };
+
+	const handleInputChange = (field, value) => {
+		setTransactionFormData((prevState) => ({
+			...prevState,
+			[field]: value,
+		}));
+	};
 
 	const checkSession = async () => {
 		const session = await AsyncStorage.getItem("session");
@@ -50,6 +80,7 @@ const Dashboard = () => {
 
 	const fetchTransactions = async () => {
 		if (!sessionData) return; // Ensure sessionData is available
+
 		const { data, error } = await supabase
 			.from("transactions")
 			.select("*")
@@ -65,6 +96,52 @@ const Dashboard = () => {
 		}
 	};
 
+	const handleAddTransaction = async () => {
+		try {
+			const { error } = await supabase
+        .from("transactions")
+        .insert([{
+				...transactionFormData,
+				employee_id: sessionData.employee_id,
+				station_id: sessionData.station_id,
+			}]);
+
+			if (error) {
+				throw new Error("Unexpected API response format");
+			} else {
+        console.log("Transaction added successfully!");
+        setTimeout(() => runOnJS(setIsVisible)(false), 2000);
+        if (setIsVisible === false) {
+          translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
+          Toast.show({
+            type: "success",
+            text1: "Success",
+            text2: "Transaction added successfully!",
+            visibilityTime: 2000,
+          });
+        }
+
+        // Reset form after successful submission
+        setTransactionFormData({
+          transaction_type: "",
+          container_count: "",
+          is_delivered: false,
+        });
+      }
+
+
+		} catch (error) {
+			console.error("Unexpected error:", error);
+
+			Toast.show({
+				type: "error",
+				text1: "Error",
+				text2: error.message || "Something went wrong. Please try again.",
+				visibilityTime: 3000,
+			});
+		}
+	};
+
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: translateY.value }],
 	}));
@@ -72,6 +149,7 @@ const Dashboard = () => {
 	const handleOutsidePress = () => {
 		translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
 		setTimeout(() => runOnJS(setIsVisible)(false), 300);
+		setTimeout(() => runOnJS(setIsResultVisible)(false), 300);
 	};
 
 	const handleGesture = (event) => {
@@ -103,26 +181,10 @@ const Dashboard = () => {
 		initialY.value = Transaction_MAX_TRANSLATE_Y; // Set the initial position when the drawer opens
 	};
 
-	const handleLogout = async () => {
-		try {
-			await AsyncStorage.removeItem("session");
-			console.log("Session removed successfully");
-			navigation.dispatch(
-				CommonActions.reset({
-					index: 0,
-					routes: [{ name: "Login" }],
-				})
-			);
-		} catch (error) {
-			console.error("Error removing session:", error);
-		}
-	};
-
 	const handleScannedResult = (result) => {
 		if (result) {
-			setIsVisible(true);
+			setIsResultVisible(true);
 			setScannedResult(result);
-			// console.log('Scanned Result:', result);
 			translateY.value = withSpring(MAX_TRANSLATE_Y);
 			initialY.value = MAX_TRANSLATE_Y;
 		}
@@ -146,6 +208,21 @@ const Dashboard = () => {
 		}, 300);
 	};
 
+	const handleLogout = async () => {
+		try {
+			await AsyncStorage.removeItem("session");
+			console.log("Session removed successfully");
+			navigation.dispatch(
+				CommonActions.reset({
+					index: 0,
+					routes: [{ name: "Login" }],
+				})
+			);
+		} catch (error) {
+			console.error("Error removing session:", error);
+		}
+	};
+
 	useEffect(() => {
 		checkSession(); // Fetch session data on component mount
 	}, []);
@@ -158,6 +235,7 @@ const Dashboard = () => {
 
 	return (
 		<View style={styles.container}>
+			<Toast />
 			{/* Sticky Header */}
 			<View style={styles.header}>
 				<Image source={require("../assets/menu_btn.png")} style={styles.menu} />
@@ -226,35 +304,108 @@ const Dashboard = () => {
 						onGestureEvent={handleGesture}
 						onEnded={handleGestureEnd}
 					>
-						<Animated.View style={[styles.drawer, animatedStyle]}>
-							<View style={styles.handle} />
-							<Text style={styles.drawerContent}>
-								Add transaction
-							</Text>
-              <View>
-                <Text>Transaction Type:</Text>
-                <TextInput
-                  style={{ height: 40, borderColor: 'gray', borderWidth: 1, borderRadius: 8, marginBottom: 10 }}
-                  placeholder="e.g Delivery, Refill"
-                />
-                <Text>Number of Containers:</Text>
-                <TextInput
-                  style={{ height: 40, borderColor: 'gray', borderWidth: 1, borderRadius: 8, marginBottom: 10 }}
-                  placeholder="Number of Containers"
-                />
-                <Text>Status:</Text>
-                <TextInput
-                  style={{ height: 40, borderColor: 'gray', borderWidth: 1, borderRadius: 8, marginBottom: 10 }}
-                  placeholder="e.g Delivered, In Progress"
-                />
-              </View>
-						</Animated.View>
+						<KeyboardAvoidingView
+							behavior={
+								Platform.OS === "android" || "ios" ? "padding" : "height"
+							}
+							style={styles.keyboardAvoidingView}
+						>
+							<Animated.View style={[styles.drawer, animatedStyle]}>
+								<View style={styles.handle} />
+								<Text style={styles.drawerContent}>Add transaction</Text>
+								<View>
+									<Text>Transaction Type:</Text>
+									<DropDownPicker
+										open={openType}
+										value={transactionFormData.transaction_type} // Assuming this is a Boolean (true/false)
+										items={[
+											{ label: "Delivery", value: "Delivery" },
+											{ label: "Refill", value: "Refill" },
+										]}
+										setOpen={setOpenType}
+										setValue={(callback) =>
+                      setTransactionFormData((prevState) => ({
+                        ...prevState,
+                        transaction_type: callback(prevState.transaction_type), // Ensure the value is updated
+                      }))
+                    }
+										setItems={setItems}
+                    onChangeText={(text) => handleInputChange("transaction_type", text)}
+										style={{
+											height: 40,
+											paddingHorizontal: 12,
+											borderColor: "gray",
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 28,
+										}}
+									/>
+									<Text>Number of Containers:</Text>
+									<TextInput
+										style={{
+											height: 40,
+											paddingHorizontal: 12,
+											borderColor: "gray",
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 10,
+										}}
+										onChangeText={(text) =>
+											handleInputChange("container_count", text)
+										}
+										placeholder="Number of Containers"
+									/>
+									<Text>Status {"(e.g Delivered, In Progress)"}:</Text>
+									{/* <TextInput
+										style={{
+											height: 40,
+											paddingHorizontal: 12,
+											borderColor: "gray",
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 18,
+										}}
+										placeholder="e.g Delivered, In Progress"
+									/> */}
+									<DropDownPicker
+										open={open}
+										value={transactionFormData.is_delivered} // Assuming this is a Boolean (true/false)
+										items={[
+											{ label: "Delivered", value: true }, // Boolean true
+											{ label: "In Progress", value: false }, // Boolean false
+										]}
+										setOpen={setOpen}
+										setValue={(callback) =>
+                      setTransactionFormData((prevState) => ({
+                        ...prevState,
+                        is_delivered: callback(prevState.is_delivered), // Ensure the value is updated
+                      }))
+                    }
+										setItems={setItems}
+										style={{
+											height: 40,
+											paddingHorizontal: 12,
+											borderColor: "gray",
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 28,
+										}}
+									/>
+								</View>
+								<TouchableOpacity
+									style={styles.logoutButton}
+									onPress={handleAddTransaction}
+								>
+									<Text style={styles.logoutButtonText}>Add Transaction</Text>
+								</TouchableOpacity>
+							</Animated.View>
+						</KeyboardAvoidingView>
 					</PanGestureHandler>
 				</GestureHandlerRootView>
 			)}
 
 			{/* Scanned Result Bottom Drawer */}
-			{scannedResult && isVisible && (
+			{scannedResult && isResultVisible && (
 				<GestureHandlerRootView style={styles.drawerContainer}>
 					<TouchableWithoutFeedback onPress={handleCloseScannedResult}>
 						<View style={styles.overlay} />
@@ -272,24 +423,24 @@ const Dashboard = () => {
 										style={{ width: 30, height: 30 }}
 										source={require("../assets/fixed_gallons.png")}
 									/>{" "}
-									{scannedResult.container_predictions["FIXED GALLONS"]}
-                  {" "}Fixed Gallons
+									{scannedResult.container_predictions["FIXED GALLONS"]} Fixed
+									Gallons
 								</Text>
 								<Text style={styles.resultDmgText}>
 									<Image
 										style={{ width: 30, height: 30 }}
 										source={require("../assets/damaged_gallons.png")}
 									/>{" "}
-									{scannedResult.container_predictions["FIXED GALLONS"]}
-                  {" "}Damaged Gallons
+									{scannedResult.container_predictions["FIXED GALLONS"]} Damaged
+									Gallons
 								</Text>
 								<Text style={styles.resultMssText}>
 									<Image
 										style={{ width: 30, height: 30 }}
 										source={require("../assets/missing_gallons.png")}
 									/>{" "}
-									{scannedResult.container_predictions["FIXED GALLONS"]}
-                  {" "}Missing Gallons
+									{scannedResult.container_predictions["FIXED GALLONS"]} Missing
+									Gallons
 								</Text>
 							</View>
 							{/* <Text style={styles.resultText}>Image:</Text> */}
@@ -297,12 +448,12 @@ const Dashboard = () => {
 								style={styles.scannedImage}
 								source={{ uri: scannedResult.image }}
 							/>
-              <TouchableOpacity style={styles.editButton}>
-                <Text style={styles.editText}>Edit Result</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.logoutButton}>
-                <Text style={styles.logoutButtonText}>Submit Result</Text>
-              </TouchableOpacity>
+							<TouchableOpacity style={styles.editButton}>
+								<Text style={styles.editText}>Edit Result</Text>
+							</TouchableOpacity>
+							<TouchableOpacity style={styles.logoutButton}>
+								<Text style={styles.logoutButtonText}>Submit Result</Text>
+							</TouchableOpacity>
 						</Animated.View>
 					</PanGestureHandler>
 				</GestureHandlerRootView>
@@ -319,7 +470,7 @@ const styles = StyleSheet.create({
 		alignItems: "start",
 		backgroundColor: "#F2F4FF",
 		paddingTop: 20, // Add padding to avoid overlap with the sticky header
-		zIndex: 5,
+		zIndex: 0,
 	},
 	header: {
 		flexDirection: "row",
@@ -545,6 +696,10 @@ const styles = StyleSheet.create({
 		zIndex: 5,
 	},
 
+	keyboardAvoidingView: {
+		flex: 1,
+	},
+
 	drawerContainer: {
 		flex: 1,
 		position: "absolute",
@@ -584,9 +739,9 @@ const styles = StyleSheet.create({
 	},
 	drawer: {
 		position: "absolute",
-		top: SCREEN_HEIGHT, // Adjust this value as needed
+		top: SCREEN_HEIGHT * 0.4, // Adjust this value as needed
 		width: "100%",
-		height: SCREEN_HEIGHT, // Adjust this value as needed
+		height: SCREEN_HEIGHT * 0.6, // Adjust this value as needed
 		backgroundColor: "#fff",
 		borderTopLeftRadius: 16,
 		borderTopRightRadius: 16,
@@ -615,12 +770,13 @@ const styles = StyleSheet.create({
 		alignSelf: "center",
 	},
 	drawerContent: {
-    flexDirection: "column",
-		marginTop: 16,
-		fontSize: 18,
-		color: "#333",
-    alignItems: "start",
-    justifyContent: "start",
+		flexDirection: "column",
+		marginBottom: 16,
+		fontSize: 24,
+		fontWeight: "bold",
+		color: "#8d8d8d",
+		alignItems: "start",
+		justifyContent: "start",
 	},
 	resultTextContainer: {
 		flexDirection: "column",
@@ -634,19 +790,19 @@ const styles = StyleSheet.create({
 	},
 	resultFixedText: {
 		fontSize: 18,
-    marginBottom: 10,
+		marginBottom: 10,
 		fontWeight: "400",
 		color: "green",
 	},
 	resultDmgText: {
 		fontSize: 18,
-    marginBottom: 10,
+		marginBottom: 10,
 		fontWeight: "400",
 		color: "red",
 	},
 	resultMssText: {
 		fontSize: 18,
-    marginBottom: 10,
+		marginBottom: 10,
 		fontWeight: "400",
 		color: "orange",
 	},
@@ -658,18 +814,18 @@ const styles = StyleSheet.create({
 		marginVertical: 20,
 		zIndex: 10,
 	},
-  editButton: {
-    backgroundColor: "#D0DADC",
+	editButton: {
+		backgroundColor: "#D0DADC",
 		padding: 15,
 		borderRadius: 5,
 		alignItems: "center",
 		width: "100%",
 		marginBottom: 10,
-  },
-  editText: {
-    color: "#6d6d6d",
-    fontWeight: "bold",
-  },
+	},
+	editText: {
+		color: "#6d6d6d",
+		fontWeight: "bold",
+	},
 	logoutButton: {
 		backgroundColor: "#00BCD4",
 		padding: 15,
