@@ -715,7 +715,7 @@ const Dashboard = () => {
 										value={transactionFormData.is_delivered} // Assuming this is a Boolean (true/false)
 										items={[
 											{ label: "Completed", value: true }, // Boolean true
-											{ label: "Pedning", value: false }, // Boolean false
+											{ label: "Pending", value: false }, // Boolean false
 										]}
 										setOpen={setOpen}
 										setValue={(callback) =>
@@ -766,7 +766,7 @@ const Dashboard = () => {
 										style={{ width: 30, height: 30 }}
 										source={require("../assets/fixed_gallons.png")}
 									/>{" "}
-									{scannedResult.container_predictions["FIXED GALLONS"]} Fixed
+									{scannedResult.container_predictions["FIXED GALLON"]} Fixed
 									Gallons
 								</Text>
 								<Text style={styles.resultDmgText}>
@@ -774,7 +774,7 @@ const Dashboard = () => {
 										style={{ width: 30, height: 30 }}
 										source={require("../assets/damaged_gallons.png")}
 									/>{" "}
-									{scannedResult.container_predictions["FIXED GALLONS"]} Damaged
+									{scannedResult.container_predictions["BROKEN GALLON"]} Damaged
 									Gallons
 								</Text>
 								<Text style={styles.resultMssText}>
@@ -782,7 +782,7 @@ const Dashboard = () => {
 										style={{ width: 30, height: 30 }}
 										source={require("../assets/missing_gallons.png")}
 									/>{" "}
-									{scannedResult.container_predictions["FIXED GALLONS"]} Missing
+									{scannedResult.container_predictions["MISSING GALLON"] || 0} Missing
 									Gallons
 								</Text>
 							</View>
