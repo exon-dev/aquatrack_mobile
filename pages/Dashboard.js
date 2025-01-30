@@ -58,6 +58,7 @@ const Dashboard = () => {
 	const [transactionFormData, setTransactionFormData] = useState({
 		transaction_type: "",
 		container_count: null,
+    delivery_location: "",
 		is_delivered: false,
 	});
 
@@ -138,6 +139,7 @@ const Dashboard = () => {
 					setTransactionFormData({
 						transaction_type: "",
 						container_count: null,
+            delivery_location: "",
 						is_delivered: false,
 					});
 				}
@@ -159,6 +161,7 @@ const Dashboard = () => {
 			setTransactionFormData({
 				transaction_type: transaction.transaction_type,
 				container_count: transaction.container_count,
+        delivery_location: transaction.delivery_location,
 				is_delivered: transaction.is_delivered,
 			});
 			// Store the transaction ID in state or a ref for later use
@@ -191,6 +194,7 @@ const Dashboard = () => {
 				.update({
 					transaction_type: transactionFormData.transaction_type,
 					container_count: transactionFormData.container_count,
+          delivery_location: transactionFormData.delivery_location,
 					is_delivered: transactionFormData.is_delivered,
 				})
 				.eq("transaction_id", selectedTransactionId) // Use the stored transaction ID
@@ -216,6 +220,7 @@ const Dashboard = () => {
 					setTransactionFormData({
 						transaction_type: "",
 						container_count: null,
+            delivery_location: "",
 						is_delivered: false,
 					});
 					setSelectedTransactionId(null); // Clear the stored transaction ID
@@ -247,6 +252,7 @@ const Dashboard = () => {
 		setTransactionFormData({
 			transaction_type: "",
 			container_count: null,
+      delivery_location: "",
 			is_delivered: false,
 		});
 	};
@@ -380,6 +386,7 @@ const Dashboard = () => {
 						<Text style={[styles.headerCell, styles.cell]}>
 							No. of Containers
 						</Text>
+						<Text style={[styles.headerCell, styles.cell]}>Location</Text>
 						<Text style={[styles.headerCell, styles.cell]}>Status</Text>
 					</View>
 					{transactionData.map((row, index) => (
@@ -393,21 +400,21 @@ const Dashboard = () => {
 							</Text>
 							<Text style={styles.cell}>{row.transaction_type}</Text>
 							<Text style={styles.cell}>{row.container_count}</Text>
+							<Text style={styles.cell}>{row.delivery_location}</Text>
 							<Text
 								style={[
 									styles.cell,
 									{
 										backgroundColor: row.is_delivered ? "green" : "orange",
 										color: "white", // Ensure text is visible
-										paddingVertical: 5,
-										paddingHorizontal: 8,
+										padding: 5,
 										borderRadius: 999,
+                    fontWeight: "bold",
 										textAlign: "center",
-										fontWeight: "bold",
 									},
 								]}
 							>
-								{row.is_delivered ? "Delivered" : "In Progress"}
+								{row.is_delivered ? "Completed" : "Pending"}
 							</Text>
 						</TouchableOpacity>
 					))}
@@ -491,13 +498,27 @@ const Dashboard = () => {
 										placeholder="Number of Containers"
 										keyboardType="numeric" // Ensure numeric keyboard is shown
 									/>
+									<Text>Delivery Location:</Text>
+									<TextInput
+										style={{
+											height: 40,
+											paddingHorizontal: 12,
+											borderColor: "gray",
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 10,
+										}}
+										value={transactionFormData.delivery_location} // Ensure it's a string
+										onChangeText={(text) => handleInputChange("delivery_location", text)}
+										placeholder="Delivery Location"
+									/>
 									<Text>Status {"(e.g Delivered, In Progress)"}:</Text>
 									<DropDownPicker
 										open={open}
 										value={transactionFormData.is_delivered} // Assuming this is a Boolean (true/false)
 										items={[
-											{ label: "Delivered", value: true }, // Boolean true
-											{ label: "In Progress", value: false }, // Boolean false
+											{ label: "Completed", value: true }, // Boolean true
+											{ label: "Pending", value: false }, // Boolean false
 										]}
 										setOpen={setOpen}
 										setValue={(callback) =>
@@ -547,7 +568,7 @@ const Dashboard = () => {
 						>
 							<Animated.View style={[styles.drawer, animatedStyle]}>
 								<View style={styles.handle} />
-								<Text style={styles.drawerContent}>Add transaction</Text>
+								<Text style={styles.drawerContent}>Edit transaction</Text>
 								<View>
 									<Text>Transaction Type:</Text>
 									<DropDownPicker
@@ -598,13 +619,28 @@ const Dashboard = () => {
 										placeholder="Number of Containers"
 										keyboardType="numeric" // Ensure numeric keyboard is shown
 									/>
+									<Text>Delivery Location:</Text>
+									<TextInput
+										style={{
+											height: 40,
+											paddingHorizontal: 12,
+											borderColor: "gray",
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 10,
+										}}
+										value={transactionFormData.delivery_location}
+										onChangeText={(text) => handleInputChange("delivery_location", text)
+										}
+										placeholder="Delivery Location"
+									/>
 									<Text>Status {"(e.g Delivered, In Progress)"}:</Text>
 									<DropDownPicker
 										open={open}
 										value={transactionFormData.is_delivered} // Assuming this is a Boolean (true/false)
 										items={[
-											{ label: "Delivered", value: true }, // Boolean true
-											{ label: "In Progress", value: false }, // Boolean false
+											{ label: "Completed", value: true }, // Boolean true
+											{ label: "Pedning", value: false }, // Boolean false
 										]}
 										setOpen={setOpen}
 										setValue={(callback) =>
@@ -870,7 +906,8 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		borderBottomWidth: 1,
 		borderBottomColor: "#ddd",
-		padding: 8,
+		paddingVertical: 8,
+    paddingHorizontal: 4,
 		width: "100%",
 	},
 	headerCell: {
@@ -881,6 +918,7 @@ const styles = StyleSheet.create({
 		flex: 1, // Equal width for all columns
 		textAlign: "center", // Center-align text
 		paddingHorizontal: 4, // Add some padding
+    fontSize: 12,
 	},
 	cardContainer: {
 		flexDirection: "row",
@@ -980,14 +1018,14 @@ const styles = StyleSheet.create({
 	// },
 	overlay: {
 		flex: 1,
-		height: SCREEN_HEIGHT, // Adjust this value as needed
+		height: SCREEN_HEIGHT * 0.8, // Adjust this value as needed
 		backgroundColor: "rgba(0, 0, 0, 0.5)", // Semi-transparent background
 	},
 	drawer: {
 		position: "absolute",
-		top: SCREEN_HEIGHT * 0.4, // Adjust this value as needed
+		top: SCREEN_HEIGHT * 0.3, // Adjust this value as needed
 		width: "100%",
-		height: SCREEN_HEIGHT * 0.6, // Adjust this value as needed
+		height: SCREEN_HEIGHT * 0.8, // Adjust this value as needed
 		backgroundColor: "#fff",
 		borderTopLeftRadius: 16,
 		borderTopRightRadius: 16,
@@ -1017,7 +1055,7 @@ const styles = StyleSheet.create({
 	},
 	drawerContent: {
 		flexDirection: "column",
-		marginBottom: 16,
+		marginBottom: 4,
 		fontSize: 24,
 		fontWeight: "bold",
 		color: "#8d8d8d",
