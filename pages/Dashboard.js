@@ -31,6 +31,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Entypo from "@expo/vector-icons/Entypo";
 import Feather from "@expo/vector-icons/Feather";
 import Navbar from "../modals/Navbar";
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from "./auth/Login";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -46,6 +47,9 @@ const Dashboard = () => {
 	const [isVisible, setIsVisible] = useState(false);
 	const [isEditVisible, setIsEditVisible] = useState(false);
 	const [isResultVisible, setIsResultVisible] = useState(false);
+  const [scanResult, setScanResult] = useState();
+  const [containersData, setContainersData] = useState([]);
+  const [loading, setLoading] = useState(false);
 	const translateY = useSharedValue(0);
 	const initialY = useSharedValue(0);
 	const [open, setOpen] = useState(false);
@@ -155,6 +159,71 @@ const Dashboard = () => {
 			});
 		}
 	};
+
+  const openCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Sorry, we need camera permissions to make this work!');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaType,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+        base64: false,
+      });
+
+      console.log('Camera Result:', result);
+
+      if (!result.canceled) {
+        setLoading(true);
+        try {
+          const formData = new FormData();
+          const uri = result.assets[0].uri;
+          const fileType = result.assets[0].mimeType;
+          const fileName = uri.split('/').pop();
+
+          formData.append('file', {
+            uri: uri,
+            name: fileName,
+            type: fileType,
+          });
+
+          const apiResponse = await fetch('http://192.168.254.104:5000/api/v1/detect', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+            body: formData,
+          });
+
+          const responseData = await apiResponse.json();
+          // console.log('API Response:', responseData);
+          setScanResult(() => ({
+            predictions: responseData.predictions,
+          }));
+        } catch (error) {
+          console.log('Error sending image to API:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error opening camera:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (scanResult) {
+      setTransactionFormData((prevState) => ({
+        ...prevState,
+        container_count: scanResult.predictions["FIXED GALLONS"],
+      }));
+    }
+  }, [scanResult]);
 
 	const handleEditDrawer = (transaction) => {
 		if (transaction) {
@@ -477,7 +546,12 @@ const Dashboard = () => {
 											marginBottom: 28,
 										}}
 									/>
-									<Text>Number of Containers:</Text>
+                  <View style={{flexDirection: "row", justifyContent: "space-between"}}>
+                    <Text>Number of Containers:</Text>
+                    <TouchableOpacity style={{position: "absolute", top: 22, right: 5, zIndex: 10, backgroundColor: "gray", borderRadius: 999, padding: 6}} onPress={openCamera}>
+                      <Text style={{color: "white", fontWeight: "bold"}}>Scan Container</Text>
+                    </TouchableOpacity>
+                  </View>
 									<TextInput
 										style={{
 											height: 40,
@@ -492,12 +566,13 @@ const Dashboard = () => {
 											(text) =>
 												handleInputChange(
 													"container_count",
-													parseInt(text.replace(/[^0-9]/g, "")) || 0
+													parseInt(text.replace(/[^0-9]/g, "")) || 0 
 												) // Ensure it's a number
 										}
 										placeholder="Number of Containers"
 										keyboardType="numeric" // Ensure numeric keyboard is shown
-									/>
+									>
+                  </TextInput>
 									<Text>Delivery Location:</Text>
 									<TextInput
 										style={{
