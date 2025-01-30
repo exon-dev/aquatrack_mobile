@@ -29,6 +29,7 @@ import DropDownPicker from "react-native-dropdown-picker";
 import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Entypo from "@expo/vector-icons/Entypo";
+import Feather from '@expo/vector-icons/Feather';
 import Navbar from "../modals/Navbar";
 import { supabase } from "./auth/Login";
 
@@ -119,14 +120,15 @@ const Dashboard = () => {
             text2: "Transaction added successfully!",
             visibilityTime: 2000,
           });
+          
+          // Reset form after successful submission
+          setTransactionFormData({
+            transaction_type: "",
+            container_count: "",
+            is_delivered: false,
+          });
         }
 
-        // Reset form after successful submission
-        setTransactionFormData({
-          transaction_type: "",
-          container_count: "",
-          is_delivered: false,
-        });
       }
 
 
@@ -223,6 +225,10 @@ const Dashboard = () => {
 		}
 	};
 
+  const handleRefresh = () => {
+    fetchTransactions()
+  };
+
 	useEffect(() => {
 		checkSession(); // Fetch session data on component mount
 	}, []);
@@ -259,6 +265,10 @@ const Dashboard = () => {
 					<TouchableOpacity style={styles.addItem} onPress={openDrawer}>
 						<Entypo name="add-to-list" size={16} color="#fff" />
 						<Text style={styles.addItemText}>Add Transaction</Text>
+					</TouchableOpacity>
+					<TouchableOpacity style={styles.refresh} onPress={handleRefresh}>
+            <Feather name="refresh-cw" size={16} color="gray" />
+						<Text style={styles.refreshText}>Refresh</Text>
 					</TouchableOpacity>
 				</View>
 
@@ -588,9 +598,10 @@ const styles = StyleSheet.create({
 		color: "#262626",
 	},
 	addListContainer: {
-		flexDirection: "row",
+		flexDirection: "column",
+    alignItems: "flex-end",
 		justifyContent: "flex-end",
-		width: "100%",
+    gap: 18,
 	},
 	addItem: {
 		flexDirection: "row",
@@ -606,11 +617,23 @@ const styles = StyleSheet.create({
 		color: "#fff",
 		fontWeight: "medium",
 	},
+  refresh: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    justifyContent: "flex-end",
+    width: "100%",
+  },
+  refreshText: {
+    color: "gray",
+    fontWeight: "medium",
+  },
 	tableContainer: {
 		backgroundColor: "#fff",
 		borderRadius: 12,
 		width: "100%",
-		marginVertical: 16,
+		marginBottom: 16,
+    marginTop: 10,
 	},
 	headerRow: {
 		flexDirection: "row",
