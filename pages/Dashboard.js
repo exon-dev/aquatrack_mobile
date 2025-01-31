@@ -12,6 +12,7 @@ import {
 	TextInput,
 	KeyboardAvoidingView,
 	Platform,
+  ActivityIndicator
 } from "react-native";
 import { Divider } from "@rneui/themed";
 import { useNavigation, CommonActions } from "@react-navigation/native";
@@ -30,6 +31,7 @@ import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Entypo from "@expo/vector-icons/Entypo";
 import Feather from "@expo/vector-icons/Feather";
+import { Ionicons } from '@expo/vector-icons';
 import Navbar from "../modals/Navbar";
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from "./auth/Login";
@@ -176,7 +178,7 @@ const Dashboard = () => {
         base64: false,
       });
 
-      console.log('Camera Result:', result);
+      // console.log('Camera Result:', result);
 
       if (!result.canceled) {
         setLoading(true);
@@ -192,7 +194,7 @@ const Dashboard = () => {
             type: fileType,
           });
 
-          const apiResponse = await fetch('http://192.168.254.104:5000/api/v1/detect', {
+          const apiResponse = await fetch('http://192.168.254.109:5000/api/v1/detect', {
             method: 'POST',
             headers: {
               'Content-Type': 'multipart/form-data',
@@ -203,7 +205,7 @@ const Dashboard = () => {
           const responseData = await apiResponse.json();
           // console.log('API Response:', responseData);
           setScanResult(() => ({
-            predictions: responseData.predictions,
+            container_predictions: responseData.predictions,
           }));
         } catch (error) {
           console.log('Error sending image to API:', error);
@@ -215,15 +217,6 @@ const Dashboard = () => {
       console.error('Error opening camera:', error);
     }
   };
-
-  useEffect(() => {
-    if (scanResult) {
-      setTransactionFormData((prevState) => ({
-        ...prevState,
-        container_count: scanResult.predictions["FIXED GALLONS"],
-      }));
-    }
-  }, [scanResult]);
 
 	const handleEditDrawer = (transaction) => {
 		if (transaction) {
@@ -401,6 +394,15 @@ const Dashboard = () => {
 		fetchTransactions();
 	};
 
+  useEffect(() => {
+    if (scanResult) {
+      setTransactionFormData((prevState) => ({
+        ...prevState,
+        container_count: scanResult.container_predictions["FIXED GALLON"],
+      }));
+    }
+  }, [scanResult]);
+
 	useEffect(() => {
 		checkSession(); // Fetch session data on component mount
 	}, []);
@@ -548,8 +550,12 @@ const Dashboard = () => {
 									/>
                   <View style={{flexDirection: "row", justifyContent: "space-between"}}>
                     <Text>Number of Containers:</Text>
-                    <TouchableOpacity style={{position: "absolute", top: 22, right: 5, zIndex: 10, backgroundColor: "gray", borderRadius: 999, padding: 6}} onPress={openCamera}>
-                      <Text style={{color: "white", fontWeight: "bold"}}>Scan Container</Text>
+                    <TouchableOpacity style={{position: "absolute", top: 18, right: 5, zIndex: 10, borderRadius: 999, padding: 6}} onPress={openCamera}>
+                      {loading ? (
+                        <ActivityIndicator color={"gray"} />
+                      ) : (
+                        <Ionicons name="camera" size={24} color="gray" />
+                      )}
                     </TouchableOpacity>
                   </View>
 									<TextInput
