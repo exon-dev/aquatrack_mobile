@@ -113,6 +113,28 @@ const Dashboard = () => {
 		}
 	};
 
+  const fetchContainers = async () => {
+    if (!sessionData) return; // Ensure sessionData is available
+  
+    const { data, error } = await supabase
+      .from("containers")
+      .select("*")
+      .eq("station_id", sessionData.station_id)
+      .in("status", ["Available", "In-use"]); // Filter by status
+  
+    if (error) {
+      console.error("Error fetching containers:", error);
+      return;
+    }
+  
+    if (data) {
+      // Count the number of containers with status "Available" and "In-use"
+      const availableCount = data.filter(container => container.status === "Available").length;
+      const inUseCount = data.filter(container => container.status === "In-use").length;
+      setContainersData({ availableCount, inUseCount });
+    }
+  };
+
 	const handleAddTransaction = async () => {
 		if (
 			!transactionFormData.transaction_type ||
@@ -496,6 +518,7 @@ const Dashboard = () => {
 
 	useEffect(() => {
 		if (sessionData) {
+      fetchContainers();
 			fetchTransactions(); // Fetch transactions when sessionData is available
 		}
 	}, [sessionData]);
@@ -528,16 +551,28 @@ const Dashboard = () => {
 					<Text style={styles.welcomeDescription}>Have a nice day!</Text>
 				</View>
 
-				<View style={styles.addListContainer}>
-					<TouchableOpacity style={styles.addItem} onPress={openDrawer}>
-						<Entypo name="add-to-list" size={16} color="#fff" />
-						<Text style={styles.addItemText}>Add Transaction</Text>
-					</TouchableOpacity>
-					<TouchableOpacity style={styles.refresh} onPress={handleRefresh}>
-						<Feather name="refresh-cw" size={16} color="gray" />
-						<Text style={styles.refreshText}>Refresh</Text>
-					</TouchableOpacity>
-				</View>
+        <View style={{flexDirection: "row", justifyContent: "space-between", alignContent: "flex-end", alignItems: "flex-end" }}>
+          <View style={styles.statistics}>
+            <Text style={{color: "green"}}>
+              <Text style={{fontSize: 20, fontWeight: "bold"}}>{containersData.availableCount}</Text> Availble Containers
+            </Text>
+            <Text style={{color: "orange"}}>
+              <Text style={{fontSize: 20, fontWeight: "bold"}}>{containersData.inUseCount}</Text> In-use Containers
+            </Text>
+          </View>
+
+          <View style={styles.addListContainer}>
+            <TouchableOpacity style={styles.addItem} onPress={openDrawer}>
+              <Entypo name="add-to-list" size={16} color="#fff" />
+              <Text style={styles.addItemText}>Add Transaction</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.refresh} onPress={handleRefresh}>
+              <Feather name="refresh-cw" size={16} color="gray" />
+              <Text style={styles.refreshText}>Refresh</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
 
 				<View style={styles.tableContainer}>
 					<View style={styles.headerRow}>
@@ -1045,6 +1080,14 @@ const styles = StyleSheet.create({
 	welcomeDescription: {
 		color: "#8d8d8d",
 	},
+  statistics: {
+    flexDirection: "column",
+    justifyContent: "space-between",
+    // marginBottom: 16,
+    // padding: 12,
+    // backgroundColor: "#fff",
+    // borderRadius: 12,
+  },
 	transactionHeader: {
 		flexDirection: "row",
 		justifyContent: "space-between",
@@ -1111,9 +1154,9 @@ const styles = StyleSheet.create({
 	},
 	addListContainer: {
 		flexDirection: "column",
-		alignItems: "flex-end",
+		alignItems: "flex-emd",
 		justifyContent: "flex-end",
-		gap: 18,
+		gap: 12,
 	},
 	addItem: {
 		flexDirection: "row",
@@ -1134,7 +1177,7 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 4,
 		justifyContent: "flex-end",
-		width: "100%",
+    marginBottom: 6,
 	},
 	refreshText: {
 		color: "gray",
