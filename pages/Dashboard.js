@@ -772,34 +772,100 @@ const Dashboard = () => {
 										style={{ width: 30, height: 30 }}
 										source={require("../assets/fixed_gallons.png")}
 									/>{" "}
-									{scannedResult.container_predictions["FIXED GALLON"]} Fixed
-									Gallons
+									Fixed Containers:
 								</Text>
+                <TextInput
+										style={{
+											padding: 12,
+											borderColor: "gray",
+                      color: "green",
+                      fontSize: 16,
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 10,
+										}}
+										value={scannedResult.container_predictions["FIXED GALLON"]?.toString()} // Ensure it's a string
+										onChangeText={
+											(text) =>
+												handleInputChange(
+													"container_count",
+													parseInt(text.replace(/[^0-9]/g, "")) || 0 
+												) // Ensure it's a number
+										}
+										placeholder="Number of Fixed Containers"
+										keyboardType="numeric" // Ensure numeric keyboard is shown
+									>
+                  </TextInput>
+                  
 								<Text style={styles.resultDmgText}>
 									<Image
 										style={{ width: 30, height: 30 }}
 										source={require("../assets/damaged_gallons.png")}
 									/>{" "}
-									{scannedResult.container_predictions["BROKEN GALLON"]} Damaged
-									Gallons
+									Damaged Containers:
 								</Text>
-								<Text style={styles.resultMssText}>
+                <TextInput
+										style={{
+											padding: 12,
+											borderColor: "gray",
+                      color: "red",
+                      fontSize: 16,
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 10,
+										}}
+										value={scannedResult.container_predictions["BROKEN GALLON"]?.toString()} // Ensure it's a string
+										onChangeText={
+											(text) =>
+												handleInputChange(
+													"container_count",
+													parseInt(text.replace(/[^0-9]/g, "")) || 0 
+												) // Ensure it's a number
+										}
+										placeholder="Number of Broken Containers"
+										keyboardType="numeric" // Ensure numeric keyboard is shown
+									>
+                  </TextInput>
+
+								{/* <Text style={styles.resultMssText}>
 									<Image
 										style={{ width: 30, height: 30 }}
 										source={require("../assets/missing_gallons.png")}
 									/>{" "}
-									{scannedResult.container_predictions["MISSING GALLON"] || 0} Missing
-									Gallons
+									Missing Containers:
 								</Text>
+                <TextInput
+										style={{
+											padding: 12,
+											borderColor: "gray",
+                      color: "red",
+                      fontSize: 16,
+											borderWidth: 1,
+											borderRadius: 8,
+											marginBottom: 10,
+										}}
+										value={scannedResult.container_predictions["MISSING GALLON"]?.toString()} // Ensure it's a string
+										onChangeText={
+											(text) =>
+												handleInputChange(
+													"container_count",
+													parseInt(text.replace(/[^0-9]/g, "")) || 0 
+												) // Ensure it's a number
+										}
+										placeholder="Number of Missing Containers"
+										keyboardType="numeric" // Ensure numeric keyboard is shown
+									>
+                  </TextInput> */}
+
 							</View>
 							{/* <Text style={styles.resultText}>Image:</Text> */}
 							<Image
 								style={styles.scannedImage}
 								source={{ uri: scannedResult.image }}
 							/>
-							<TouchableOpacity style={styles.editButton}>
+							{/* <TouchableOpacity style={styles.editButton}>
 								<Text style={styles.editText}>Edit Result</Text>
-							</TouchableOpacity>
+							</TouchableOpacity> */}
 							<TouchableOpacity style={styles.logoutButton}>
 								<Text style={styles.logoutButtonText}>Submit Result</Text>
 							</TouchableOpacity>
