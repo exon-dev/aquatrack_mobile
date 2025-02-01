@@ -12,7 +12,7 @@ import {
 	TextInput,
 	KeyboardAvoidingView,
 	Platform,
-  ActivityIndicator
+	ActivityIndicator,
 } from "react-native";
 import { Divider } from "@rneui/themed";
 import { useNavigation, CommonActions } from "@react-navigation/native";
@@ -31,9 +31,9 @@ import Toast from "react-native-toast-message";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Entypo from "@expo/vector-icons/Entypo";
 import Feather from "@expo/vector-icons/Feather";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
 import Navbar from "../modals/Navbar";
-import * as ImagePicker from 'expo-image-picker';
+import * as ImagePicker from "expo-image-picker";
 import { supabase } from "./auth/Login";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -49,9 +49,9 @@ const Dashboard = () => {
 	const [isVisible, setIsVisible] = useState(false);
 	const [isEditVisible, setIsEditVisible] = useState(false);
 	const [isResultVisible, setIsResultVisible] = useState(false);
-  const [scanResult, setScanResult] = useState();
-  const [containersData, setContainersData] = useState([]);
-  const [loading, setLoading] = useState(false);
+	const [scanResult, setScanResult] = useState();
+	const [containersData, setContainersData] = useState([]);
+	const [loading, setLoading] = useState(false);
 	const translateY = useSharedValue(0);
 	const initialY = useSharedValue(0);
 	const [open, setOpen] = useState(false);
@@ -61,11 +61,17 @@ const Dashboard = () => {
 		{ label: "Delivered", value: "true" },
 		{ label: "In Progress", value: "false" },
 	]);
+
 	const [transactionFormData, setTransactionFormData] = useState({
 		transaction_type: "",
 		container_count: null,
-    delivery_location: "",
+		delivery_location: "",
 		is_delivered: false,
+	});
+
+	const [scannedResultFormData, setScannedResultFormData] = useState({
+		fixed_gallons: null,
+		broken_gallons: null,
 	});
 
 	const checkSession = async () => {
@@ -77,6 +83,13 @@ const Dashboard = () => {
 
 	const handleInputChange = (field, value) => {
 		setTransactionFormData((prevState) => ({
+			...prevState,
+			[field]: value,
+		}));
+	};
+
+	const handleScannedInputChange = (field, value) => {
+		setScannedResultFormData((prevState) => ({
 			...prevState,
 			[field]: value,
 		}));
@@ -145,7 +158,7 @@ const Dashboard = () => {
 					setTransactionFormData({
 						transaction_type: "",
 						container_count: null,
-            delivery_location: "",
+						delivery_location: "",
 						is_delivered: false,
 					});
 				}
@@ -162,68 +175,74 @@ const Dashboard = () => {
 		}
 	};
 
-  const openCamera = async () => {
-    try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Sorry, we need camera permissions to make this work!');
-        return;
-      }
+	const openCamera = async () => {
+		try {
+			const { status } = await ImagePicker.requestCameraPermissionsAsync();
+			if (status !== "granted") {
+				Alert.alert(
+					"Permission Denied",
+					"Sorry, we need camera permissions to make this work!"
+				);
+				return;
+			}
 
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaType,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-        base64: false,
-      });
+			const result = await ImagePicker.launchCameraAsync({
+				mediaTypes: ImagePicker.MediaType,
+				allowsEditing: true,
+				aspect: [4, 3],
+				quality: 1,
+				base64: false,
+			});
 
-      // console.log('Camera Result:', result);
+			// console.log('Camera Result:', result);
 
-      if (!result.canceled) {
-        setLoading(true);
-        try {
-          const formData = new FormData();
-          const uri = result.assets[0].uri;
-          const fileType = result.assets[0].mimeType;
-          const fileName = uri.split('/').pop();
+			if (!result.canceled) {
+				setLoading(true);
+				try {
+					const formData = new FormData();
+					const uri = result.assets[0].uri;
+					const fileType = result.assets[0].mimeType;
+					const fileName = uri.split("/").pop();
 
-          formData.append('file', {
-            uri: uri,
-            name: fileName,
-            type: fileType,
-          });
+					formData.append("file", {
+						uri: uri,
+						name: fileName,
+						type: fileType,
+					});
 
-          const apiResponse = await fetch('http://192.168.254.109:5000/api/v1/detect', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-            body: formData,
-          });
+					const apiResponse = await fetch(
+						"http://192.168.254.109:5000/api/v1/detect",
+						{
+							method: "POST",
+							headers: {
+								"Content-Type": "multipart/form-data",
+							},
+							body: formData,
+						}
+					);
 
-          const responseData = await apiResponse.json();
-          // console.log('API Response:', responseData);
-          setScanResult(() => ({
-            container_predictions: responseData.predictions,
-          }));
-        } catch (error) {
-          console.log('Error sending image to API:', error);
-        } finally {
-          setLoading(false);
-        }
-      }
-    } catch (error) {
-      console.error('Error opening camera:', error);
-    }
-  };
+					const responseData = await apiResponse.json();
+					// console.log('API Response:', responseData);
+					setScanResult(() => ({
+						container_predictions: responseData.predictions,
+					}));
+				} catch (error) {
+					console.log("Error sending image to API:", error);
+				} finally {
+					setLoading(false);
+				}
+			}
+		} catch (error) {
+			console.error("Error opening camera:", error);
+		}
+	};
 
 	const handleEditDrawer = (transaction) => {
 		if (transaction) {
 			setTransactionFormData({
 				transaction_type: transaction.transaction_type,
 				container_count: transaction.container_count,
-        delivery_location: transaction.delivery_location,
+				delivery_location: transaction.delivery_location,
 				is_delivered: transaction.is_delivered,
 			});
 			// Store the transaction ID in state or a ref for later use
@@ -256,7 +275,7 @@ const Dashboard = () => {
 				.update({
 					transaction_type: transactionFormData.transaction_type,
 					container_count: transactionFormData.container_count,
-          delivery_location: transactionFormData.delivery_location,
+					delivery_location: transactionFormData.delivery_location,
 					is_delivered: transactionFormData.is_delivered,
 				})
 				.eq("transaction_id", selectedTransactionId) // Use the stored transaction ID
@@ -282,7 +301,7 @@ const Dashboard = () => {
 					setTransactionFormData({
 						transaction_type: "",
 						container_count: null,
-            delivery_location: "",
+						delivery_location: "",
 						is_delivered: false,
 					});
 					setSelectedTransactionId(null); // Clear the stored transaction ID
@@ -300,6 +319,48 @@ const Dashboard = () => {
 		}
 	};
 
+	const handleUpdateContainers = async () => {
+    try {
+      // Step 1: Fetch random containers using the PostgreSQL function
+      const { data: containers, error: fetchError } = await supabase
+        .rpc("get_random_containers", {
+          limit_count: scannedResultFormData.broken_gallons,
+        });
+  
+      if (fetchError) {
+        console.error("Error fetching containers:", fetchError);
+        return;
+      }
+  
+      if (containers.length === 0) {
+        console.log("No containers found to update.");
+        return;
+      }
+  
+      // Step 2: Extract container IDs
+      const containerIds = containers.map(
+        (container) => container.container_id
+      );
+  
+      // Step 3: Update the selected containers
+      const { data, error: updateError } = await supabase
+        .from("containers")
+        .update({ dmg_containers: true })
+        .in("container_id", containerIds)
+        .eq("station_id", sessionData.station_id)
+        .eq("employee_id", sessionData.employee_id);
+  
+      if (updateError) {
+        console.error("Error updating containers:", updateError);
+        return;
+      } else {
+        console.log("Containers updated successfully!", data);
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+    }
+  };
+
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: translateY.value }],
 	}));
@@ -314,7 +375,7 @@ const Dashboard = () => {
 		setTransactionFormData({
 			transaction_type: "",
 			container_count: null,
-      delivery_location: "",
+			delivery_location: "",
 			is_delivered: false,
 		});
 	};
@@ -394,14 +455,17 @@ const Dashboard = () => {
 		fetchTransactions();
 	};
 
-  useEffect(() => {
-    if (scanResult) {
-      setTransactionFormData((prevState) => ({
-        ...prevState,
-        container_count: scanResult.container_predictions["FIXED GALLON"],
-      }));
-    }
-  }, [scanResult]);
+	useEffect(() => {
+		if (scannedResult) {
+			setScannedResultFormData({
+				fixed_gallons: scannedResult.container_predictions["FIXED GALLON"] || 0,
+				broken_gallons:
+					scannedResult.container_predictions["BROKEN GALLON"] || 0,
+				missing_gallons:
+					scannedResult.container_predictions["MISSING GALLON"] || 0,
+			});
+		}
+	}, [scannedResult]);
 
 	useEffect(() => {
 		checkSession(); // Fetch session data on component mount
@@ -419,13 +483,15 @@ const Dashboard = () => {
 			{/* Sticky Header */}
 			<View style={styles.header}>
 				{/* <Image source={require("../assets/menu_btn.png")} style={styles.menu} /> */}
-        {sessionData && (
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {sessionData.first_name && sessionData.last_name ? `${sessionData.first_name[0]}${sessionData.last_name[0]}` : "NA"}
-            </Text>
-          </View>
-        )}
+				{sessionData && (
+					<View style={styles.avatar}>
+						<Text style={styles.avatarText}>
+							{sessionData.first_name && sessionData.last_name
+								? `${sessionData.first_name[0]}${sessionData.last_name[0]}`
+								: "NA"}
+						</Text>
+					</View>
+				)}
 			</View>
 
 			{/* Scrollable Content */}
@@ -480,7 +546,7 @@ const Dashboard = () => {
 										color: "white", // Ensure text is visible
 										padding: 5,
 										borderRadius: 999,
-                    fontWeight: "bold",
+										fontWeight: "bold",
 										textAlign: "center",
 									},
 								]}
@@ -548,16 +614,31 @@ const Dashboard = () => {
 											marginBottom: 28,
 										}}
 									/>
-                  <View style={{flexDirection: "row", justifyContent: "space-between"}}>
-                    <Text>Number of Containers:</Text>
-                    <TouchableOpacity style={{position: "absolute", top: 18, right: 5, zIndex: 10, borderRadius: 999, padding: 6}} onPress={openCamera}>
-                      {loading ? (
-                        <ActivityIndicator color={"gray"} />
-                      ) : (
-                        <Ionicons name="camera" size={24} color="gray" />
-                      )}
-                    </TouchableOpacity>
-                  </View>
+									<View
+										style={{
+											flexDirection: "row",
+											justifyContent: "space-between",
+										}}
+									>
+										<Text>Number of Containers:</Text>
+										<TouchableOpacity
+											style={{
+												position: "absolute",
+												top: 18,
+												right: 5,
+												zIndex: 10,
+												borderRadius: 999,
+												padding: 6,
+											}}
+											onPress={openCamera}
+										>
+											{loading ? (
+												<ActivityIndicator color={"gray"} />
+											) : (
+												<Ionicons name="camera" size={24} color="gray" />
+											)}
+										</TouchableOpacity>
+									</View>
 									<TextInput
 										style={{
 											height: 40,
@@ -572,13 +653,12 @@ const Dashboard = () => {
 											(text) =>
 												handleInputChange(
 													"container_count",
-													parseInt(text.replace(/[^0-9]/g, "")) || 0 
+													parseInt(text.replace(/[^0-9]/g, "")) || 0
 												) // Ensure it's a number
 										}
 										placeholder="Number of Containers"
 										keyboardType="numeric" // Ensure numeric keyboard is shown
-									>
-                  </TextInput>
+									></TextInput>
 									<Text>Delivery Location:</Text>
 									<TextInput
 										style={{
@@ -590,7 +670,9 @@ const Dashboard = () => {
 											marginBottom: 10,
 										}}
 										value={transactionFormData.delivery_location} // Ensure it's a string
-										onChangeText={(text) => handleInputChange("delivery_location", text)}
+										onChangeText={(text) =>
+											handleInputChange("delivery_location", text)
+										}
 										placeholder="Delivery Location"
 									/>
 									<Text>Status {"(e.g Delivered, In Progress)"}:</Text>
@@ -711,7 +793,8 @@ const Dashboard = () => {
 											marginBottom: 10,
 										}}
 										value={transactionFormData.delivery_location}
-										onChangeText={(text) => handleInputChange("delivery_location", text)
+										onChangeText={(text) =>
+											handleInputChange("delivery_location", text)
 										}
 										placeholder="Delivery Location"
 									/>
@@ -774,29 +857,28 @@ const Dashboard = () => {
 									/>{" "}
 									Fixed Containers:
 								</Text>
-                <TextInput
-										style={{
-											padding: 12,
-											borderColor: "gray",
-                      color: "green",
-                      fontSize: 16,
-											borderWidth: 1,
-											borderRadius: 8,
-											marginBottom: 10,
-										}}
-										value={scannedResult.container_predictions["FIXED GALLON"]?.toString()} // Ensure it's a string
-										onChangeText={
-											(text) =>
-												handleInputChange(
-													"container_count",
-													parseInt(text.replace(/[^0-9]/g, "")) || 0 
-												) // Ensure it's a number
-										}
-										placeholder="Number of Fixed Containers"
-										keyboardType="numeric" // Ensure numeric keyboard is shown
-									>
-                  </TextInput>
-                  
+								<TextInput
+									style={{
+										padding: 12,
+										borderColor: "gray",
+										color: "red",
+										fontSize: 16,
+										borderWidth: 1,
+										borderRadius: 8,
+										marginBottom: 10,
+									}}
+									value={scannedResultFormData.fixed_gallons?.toString()} // Bind to state
+									onChangeText={(text) =>
+										handleScannedInputChange(
+											"fixed_gallons",
+											parseInt(text.replace(/[^0-9]/g, "")) || 0
+										)
+									}
+									placeholder="Number of Fixed Containers"
+									keyboardType="numeric"
+                  returnKeyType="done"
+								/>
+
 								<Text style={styles.resultDmgText}>
 									<Image
 										style={{ width: 30, height: 30 }}
@@ -804,28 +886,27 @@ const Dashboard = () => {
 									/>{" "}
 									Damaged Containers:
 								</Text>
-                <TextInput
-										style={{
-											padding: 12,
-											borderColor: "gray",
-                      color: "red",
-                      fontSize: 16,
-											borderWidth: 1,
-											borderRadius: 8,
-											marginBottom: 10,
-										}}
-										value={scannedResult.container_predictions["BROKEN GALLON"]?.toString()} // Ensure it's a string
-										onChangeText={
-											(text) =>
-												handleInputChange(
-													"container_count",
-													parseInt(text.replace(/[^0-9]/g, "")) || 0 
-												) // Ensure it's a number
-										}
-										placeholder="Number of Broken Containers"
-										keyboardType="numeric" // Ensure numeric keyboard is shown
-									>
-                  </TextInput>
+								<TextInput
+									style={{
+										padding: 12,
+										borderColor: "gray",
+										color: "red",
+										fontSize: 16,
+										borderWidth: 1,
+										borderRadius: 8,
+										marginBottom: 10,
+									}}
+									value={scannedResultFormData.broken_gallons?.toString()} // Bind to state
+									onChangeText={(text) =>
+										handleScannedInputChange(
+											"broken_gallons",
+											parseInt(text.replace(/[^0-9]/g, "")) || 0
+										)
+									}
+									placeholder="Number of Broken Containers"
+									keyboardType="numeric"
+                  returnKeyType="done"
+								/>
 
 								{/* <Text style={styles.resultMssText}>
 									<Image
@@ -856,7 +937,6 @@ const Dashboard = () => {
 										keyboardType="numeric" // Ensure numeric keyboard is shown
 									>
                   </TextInput> */}
-
 							</View>
 							{/* <Text style={styles.resultText}>Image:</Text> */}
 							<Image
@@ -866,7 +946,10 @@ const Dashboard = () => {
 							{/* <TouchableOpacity style={styles.editButton}>
 								<Text style={styles.editText}>Edit Result</Text>
 							</TouchableOpacity> */}
-							<TouchableOpacity style={styles.logoutButton}>
+							<TouchableOpacity
+								style={styles.logoutButton}
+								onPress={handleUpdateContainers}
+							>
 								<Text style={styles.logoutButtonText}>Submit Result</Text>
 							</TouchableOpacity>
 						</Animated.View>
@@ -1054,7 +1137,7 @@ const styles = StyleSheet.create({
 		borderBottomWidth: 1,
 		borderBottomColor: "#ddd",
 		paddingVertical: 8,
-    paddingHorizontal: 4,
+		paddingHorizontal: 4,
 		width: "100%",
 	},
 	headerCell: {
@@ -1065,7 +1148,7 @@ const styles = StyleSheet.create({
 		flex: 1, // Equal width for all columns
 		textAlign: "center", // Center-align text
 		paddingHorizontal: 4, // Add some padding
-    fontSize: 12,
+		fontSize: 12,
 	},
 	cardContainer: {
 		flexDirection: "row",
