@@ -49,7 +49,7 @@ const Dashboard = () => {
 	const [isVisible, setIsVisible] = useState(false);
 	const [isEditVisible, setIsEditVisible] = useState(false);
 	const [isResultVisible, setIsResultVisible] = useState(false);
-	const [scanResult, setScanResult] = useState();
+	const [scanResult, setScanResult] = useState(null);
 	const [containersData, setContainersData] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const translateY = useSharedValue(0);
@@ -222,10 +222,12 @@ const Dashboard = () => {
 					);
 
 					const responseData = await apiResponse.json();
-					// console.log('API Response:', responseData);
-					setScanResult(() => ({
+					// console.log("API Response:", responseData);
+					setScanResult({
 						container_predictions: responseData.predictions,
-					}));
+					});
+					console.log(scanResult);
+
 				} catch (error) {
 					console.log("Error sending image to API:", error);
 				} finally {
@@ -236,6 +238,19 @@ const Dashboard = () => {
 			console.error("Error opening camera:", error);
 		}
 	};
+
+  useEffect(() => {
+		if (scanResult && scanResult.container_predictions) {
+			// Update the container_count with the "FIXED GALLON" value
+			const fixedGallonValue = scanResult.container_predictions["FIXED GALLON"];
+			if (fixedGallonValue !== undefined) {
+				setTransactionFormData((prevData) => ({
+					...prevData,
+					container_count: fixedGallonValue,
+				}));
+			}
+		}
+	}, [scanResult]);
 
 	const handleEditDrawer = (transaction) => {
 		if (transaction) {
@@ -320,46 +335,48 @@ const Dashboard = () => {
 	};
 
 	const handleUpdateContainers = async () => {
-    try {
-      // Step 1: Fetch random containers using the PostgreSQL function
-      const { data: containers, error: fetchError } = await supabase
-        .rpc("get_random_containers", {
-          limit_count: scannedResultFormData.broken_gallons,
-        });
-  
-      if (fetchError) {
-        console.error("Error fetching containers:", fetchError);
-        return;
-      }
-  
-      if (containers.length === 0) {
-        console.log("No containers found to update.");
-        return;
-      }
-  
-      // Step 2: Extract container IDs
-      const containerIds = containers.map(
-        (container) => container.container_id
-      );
-  
-      // Step 3: Update the selected containers
-      const { data, error: updateError } = await supabase
-        .from("containers")
-        .update({ dmg_containers: true })
-        .in("container_id", containerIds)
-        .eq("station_id", sessionData.station_id)
-        .eq("employee_id", sessionData.employee_id);
-  
-      if (updateError) {
-        console.error("Error updating containers:", updateError);
-        return;
-      } else {
-        console.log("Containers updated successfully!", data);
-      }
-    } catch (error) {
-      console.error("Unexpected error:", error);
-    }
-  };
+		try {
+			// Step 1: Fetch random containers using the PostgreSQL function
+			const { data: containers, error: fetchError } = await supabase.rpc(
+				"get_random_containers",
+				{
+					limit_count: scannedResultFormData.broken_gallons,
+				}
+			);
+
+			if (fetchError) {
+				console.error("Error fetching containers:", fetchError);
+				return;
+			}
+
+			if (containers.length === 0) {
+				console.log("No containers found to update.");
+				return;
+			}
+
+			// Step 2: Extract container IDs
+			const containerIds = containers.map(
+				(container) => container.container_id
+			);
+
+			// Step 3: Update the selected containers
+			const { data, error: updateError } = await supabase
+				.from("containers")
+				.update({ dmg_containers: true })
+				.in("container_id", containerIds)
+				.eq("station_id", sessionData.station_id)
+				.eq("employee_id", sessionData.employee_id);
+
+			if (updateError) {
+				console.error("Error updating containers:", updateError);
+				return;
+			} else {
+				console.log("Containers updated successfully!", data);
+			}
+		} catch (error) {
+			console.error("Unexpected error:", error);
+		}
+	};
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: translateY.value }],
@@ -466,6 +483,12 @@ const Dashboard = () => {
 			});
 		}
 	}, [scannedResult]);
+
+	useEffect(() => {
+		if (scanResult) {
+			console.log("Updated Scan Result:", scanResult);
+		}
+	}, [scanResult]); // This will log the updated scanResult whenever it changes
 
 	useEffect(() => {
 		checkSession(); // Fetch session data on component mount
@@ -648,6 +671,7 @@ const Dashboard = () => {
 											borderRadius: 8,
 											marginBottom: 10,
 										}}
+                    // value={scanResult.container_predictions["FIXED GALLON"]?.toString()} // Ensure it's a string
 										value={transactionFormData.container_count?.toString()} // Ensure it's a string
 										onChangeText={
 											(text) =>
@@ -658,7 +682,7 @@ const Dashboard = () => {
 										}
 										placeholder="Number of Containers"
 										keyboardType="numeric" // Ensure numeric keyboard is shown
-									></TextInput>
+									/>
 									<Text>Delivery Location:</Text>
 									<TextInput
 										style={{
@@ -876,7 +900,7 @@ const Dashboard = () => {
 									}
 									placeholder="Number of Fixed Containers"
 									keyboardType="numeric"
-                  returnKeyType="done"
+									returnKeyType="done"
 								/>
 
 								<Text style={styles.resultDmgText}>
@@ -905,7 +929,7 @@ const Dashboard = () => {
 									}
 									placeholder="Number of Broken Containers"
 									keyboardType="numeric"
-                  returnKeyType="done"
+									returnKeyType="done"
 								/>
 
 								{/* <Text style={styles.resultMssText}>
