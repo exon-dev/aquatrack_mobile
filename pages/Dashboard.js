@@ -765,12 +765,21 @@ const Dashboard = () => {
 					}}
 				>
 					<View style={styles.statistics}>
-						<Text style={{ color: "green" }}>
-							<Text style={{ fontSize: 24, fontWeight: "bold" }}>
-								{containersData.availableCount}
-							</Text>{" "}
-							Availble Containers
-						</Text>
+            {containersData.availableCount === 0 ? (
+              <Text style={{ color: "red", fontSize: 18, fontWeight: "bold" }}>
+                {/* <Text style={{ fontSize: 24, fontWeight: "bold" }}>
+                  {containersData.availableCount}
+                </Text>{" "} */}
+                Containers Out-of-Stock
+						  </Text>
+            ) : (
+              <Text style={{ color: "green" }}>
+                <Text style={{ fontSize: 24, fontWeight: "bold" }}>
+                  {containersData.availableCount}
+                </Text>{" "}
+                Availble Containers
+              </Text>
+            )}
 						<Text style={{ color: "orange" }}>
 							<Text style={{ fontSize: 24, fontWeight: "bold" }}>
 								{containersData.inUseCount}
