@@ -72,6 +72,8 @@ const Dashboard = () => {
 	const [scannedResultFormData, setScannedResultFormData] = useState({
 		fixed_gallons: null,
 		broken_gallons: null,
+    is_available: null,
+    missing_gallons: null,
 	});
 
 	const checkSession = async () => {
@@ -113,27 +115,31 @@ const Dashboard = () => {
 		}
 	};
 
-  const fetchContainers = async () => {
-    if (!sessionData) return; // Ensure sessionData is available
-  
-    const { data, error } = await supabase
-      .from("containers")
-      .select("*")
-      .eq("station_id", sessionData.station_id)
-      .in("status", ["Available", "In-use"]); // Filter by status
-  
-    if (error) {
-      console.error("Error fetching containers:", error);
-      return;
-    }
-  
-    if (data) {
-      // Count the number of containers with status "Available" and "In-use"
-      const availableCount = data.filter(container => container.status === "Available").length;
-      const inUseCount = data.filter(container => container.status === "In-use").length;
-      setContainersData({ availableCount, inUseCount });
-    }
-  };
+	const fetchContainers = async () => {
+		if (!sessionData) return; // Ensure sessionData is available
+
+		const { data, error } = await supabase
+			.from("containers")
+			.select("*")
+			.eq("station_id", sessionData.station_id)
+			.in("is_available", [true, false]); // Filter by status
+
+		if (error) {
+			console.error("Error fetching containers:", error);
+			return;
+		}
+
+		if (data) {
+			// Count the number of containers with is_available "TRUE" and "FALSE"
+			const availableCount = data.filter(
+				(container) => container.is_available === true
+			).length;
+			const inUseCount = data.filter(
+				(container) => container.is_available === false
+			).length;
+			setContainersData({ availableCount, inUseCount });
+		}
+	};
 
 	const handleAddTransaction = async () => {
 		if (
@@ -249,7 +255,6 @@ const Dashboard = () => {
 						container_predictions: responseData.predictions,
 					});
 					console.log(scanResult);
-
 				} catch (error) {
 					console.log("Error sending image to API:", error);
 				} finally {
@@ -261,7 +266,7 @@ const Dashboard = () => {
 		}
 	};
 
-  useEffect(() => {
+	useEffect(() => {
 		if (scanResult && scanResult.container_predictions) {
 			// Update the container_count with the "FIXED GALLON" value
 			const fixedGallonValue = scanResult.container_predictions["FIXED GALLON"];
@@ -358,6 +363,7 @@ const Dashboard = () => {
 
 	const handleUpdateContainers = async () => {
 		try {
+      
 			// Step 1: Fetch random containers using the PostgreSQL function
 			const { data: containers, error: fetchError } = await supabase.rpc(
 				"get_random_containers",
@@ -373,6 +379,11 @@ const Dashboard = () => {
 
 			if (containers.length === 0) {
 				console.log("No containers found to update.");
+				return;
+			}
+
+			if (scannedResultFormData.broken_gallons > containers.length) {
+				console.log("Not enough containers found to update.");
 				return;
 			}
 
@@ -393,7 +404,8 @@ const Dashboard = () => {
 				console.error("Error updating containers:", updateError);
 				return;
 			} else {
-				console.log("Containers updated successfully!", data);
+				console.log("Containers updated successfully!");
+        setTimeout(() => runOnJS(setIsResultVisible)(false), 300);
 			}
 		} catch (error) {
 			console.error("Unexpected error:", error);
@@ -492,6 +504,7 @@ const Dashboard = () => {
 
 	const handleRefresh = () => {
 		fetchTransactions();
+    fetchContainers();
 	};
 
 	useEffect(() => {
@@ -518,7 +531,7 @@ const Dashboard = () => {
 
 	useEffect(() => {
 		if (sessionData) {
-      fetchContainers();
+			fetchContainers();
 			fetchTransactions(); // Fetch transactions when sessionData is available
 		}
 	}, [sessionData]);
@@ -551,28 +564,40 @@ const Dashboard = () => {
 					<Text style={styles.welcomeDescription}>Have a nice day!</Text>
 				</View>
 
-        <View style={{flexDirection: "row", justifyContent: "space-between", alignContent: "flex-end", alignItems: "flex-end" }}>
-          <View style={styles.statistics}>
-            <Text style={{color: "green"}}>
-              <Text style={{fontSize: 20, fontWeight: "bold"}}>{containersData.availableCount}</Text> Availble Containers
-            </Text>
-            <Text style={{color: "orange"}}>
-              <Text style={{fontSize: 20, fontWeight: "bold"}}>{containersData.inUseCount}</Text> In-use Containers
-            </Text>
-          </View>
+				<View
+					style={{
+						flexDirection: "row",
+						justifyContent: "space-between",
+						alignContent: "flex-end",
+						alignItems: "flex-end",
+					}}
+				>
+					<View style={styles.statistics}>
+						<Text style={{ color: "green" }}>
+							<Text style={{ fontSize: 24, fontWeight: "bold" }}>
+								{containersData.availableCount}
+							</Text>{" "}
+							Availble Containers
+						</Text>
+						<Text style={{ color: "orange" }}>
+							<Text style={{ fontSize: 24, fontWeight: "bold" }}>
+								{containersData.inUseCount}
+							</Text>{" "}
+							In-use Containers
+						</Text>
+					</View>
 
-          <View style={styles.addListContainer}>
-            <TouchableOpacity style={styles.addItem} onPress={openDrawer}>
-              <Entypo name="add-to-list" size={16} color="#fff" />
-              <Text style={styles.addItemText}>Add Transaction</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.refresh} onPress={handleRefresh}>
-              <Feather name="refresh-cw" size={16} color="gray" />
-              <Text style={styles.refreshText}>Refresh</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
+					<View style={styles.addListContainer}>
+						<TouchableOpacity style={styles.addItem} onPress={openDrawer}>
+							<Entypo name="add-to-list" size={16} color="#fff" />
+							<Text style={styles.addItemText}>Add Transaction</Text>
+						</TouchableOpacity>
+						<TouchableOpacity style={styles.refresh} onPress={handleRefresh}>
+							<Feather name="refresh-cw" size={16} color="gray" />
+							<Text style={styles.refreshText}>Refresh</Text>
+						</TouchableOpacity>
+					</View>
+				</View>
 
 				<View style={styles.tableContainer}>
 					<View style={styles.headerRow}>
@@ -706,7 +731,7 @@ const Dashboard = () => {
 											borderRadius: 8,
 											marginBottom: 10,
 										}}
-                    // value={scanResult.container_predictions["FIXED GALLON"]?.toString()} // Ensure it's a string
+										// value={scanResult.container_predictions["FIXED GALLON"]?.toString()} // Ensure it's a string
 										value={transactionFormData.container_count?.toString()} // Ensure it's a string
 										onChangeText={
 											(text) =>
@@ -908,96 +933,152 @@ const Dashboard = () => {
 						<Animated.View style={[styles.scannedResultDrawer, animatedStyle]}>
 							<View style={styles.handle} />
 							<Text style={styles.resultText}>Scanned Result:</Text>
+
 							<View style={styles.resultTextContainer}>
-								<Text style={styles.resultFixedText}>
-									<Image
-										style={{ width: 30, height: 30 }}
-										source={require("../assets/fixed_gallons.png")}
-									/>{" "}
-									Fixed Containers:
-								</Text>
-								<TextInput
+								<View
 									style={{
-										padding: 12,
-										borderColor: "gray",
-										color: "red",
-										fontSize: 16,
-										borderWidth: 1,
-										borderRadius: 8,
-										marginBottom: 10,
+										flexDirection: "row",
+										justifyContent: "space-between",
 									}}
-									value={scannedResultFormData.fixed_gallons?.toString()} // Bind to state
-									onChangeText={(text) =>
-										handleScannedInputChange(
-											"fixed_gallons",
-											parseInt(text.replace(/[^0-9]/g, "")) || 0
-										)
-									}
-									placeholder="Number of Fixed Containers"
-									keyboardType="numeric"
-									returnKeyType="done"
-								/>
+								>
+									<View style={{ width: "48%" }}>
+										<Text style={styles.resultFixedText}>
+											<Image
+												style={{ width: 20, height: 20 }}
+												source={require("../assets/fixed_gallons.png")}
+											/>{" "}
+											Fixed Containers:
+										</Text>
+										<TextInput
+											style={{
+												padding: 8,
+												borderColor: "gray",
+												color: "red",
+												fontSize: 16,
+												borderWidth: 1,
+												borderRadius: 8,
+												marginBottom: 10,
+											}}
+											value={scannedResultFormData.fixed_gallons?.toString()} // Bind to state
+											onChangeText={(text) =>
+												handleScannedInputChange(
+													"fixed_gallons",
+													parseInt(text.replace(/[^0-9]/g, "")) || 0
+												)
+											}
+											placeholder="Number of Fixed Containers"
+											keyboardType="numeric"
+											returnKeyType="done"
+										/>
+									</View>
 
-								<Text style={styles.resultDmgText}>
-									<Image
-										style={{ width: 30, height: 30 }}
-										source={require("../assets/damaged_gallons.png")}
-									/>{" "}
-									Damaged Containers:
-								</Text>
-								<TextInput
+									<View style={{ width: "48%" }}>
+										<Text style={styles.resultDmgText}>
+											<Image
+												style={{ width: 20, height: 20 }}
+												source={require("../assets/damaged_gallons.png")}
+											/>{" "}
+											Damaged Containers:
+										</Text>
+										<TextInput
+											style={{
+												padding: 8,
+												borderColor: "gray",
+												color: "red",
+												fontSize: 16,
+												borderWidth: 1,
+												borderRadius: 8,
+												marginBottom: 10,
+											}}
+											value={scannedResultFormData.broken_gallons?.toString()} // Bind to state
+											onChangeText={(text) =>
+												handleScannedInputChange(
+													"broken_gallons",
+													parseInt(text.replace(/[^0-9]/g, "")) || 0
+												)
+											}
+											placeholder="Number of Broken Containers"
+											keyboardType="numeric"
+											returnKeyType="done"
+										/>
+									</View>
+								</View>
+
+								<View
 									style={{
-										padding: 12,
-										borderColor: "gray",
-										color: "red",
-										fontSize: 16,
-										borderWidth: 1,
-										borderRadius: 8,
-										marginBottom: 10,
+										flexDirection: "row",
+										justifyContent: "space-between",
 									}}
-									value={scannedResultFormData.broken_gallons?.toString()} // Bind to state
-									onChangeText={(text) =>
-										handleScannedInputChange(
-											"broken_gallons",
-											parseInt(text.replace(/[^0-9]/g, "")) || 0
-										)
-									}
-									placeholder="Number of Broken Containers"
-									keyboardType="numeric"
-									returnKeyType="done"
-								/>
+								>
+									<View style={{ width: "48%" }}>
+										<Text style={styles.resultAvailText}>
+											<Image
+												style={{ width: 20, height: 20 }}
+												source={require("../assets/available_gallons.png")}
+											/>{" "}
+											Available Containers:
+										</Text>
+										<TextInput
+											style={{
+												padding: 8,
+												borderColor: "gray",
+												color: "red",
+												fontSize: 16,
+												borderWidth: 1,
+												borderRadius: 8,
+												marginBottom: 10,
+											}}
+											value={scannedResult.container_predictions[
+												"AVAILABLE GALLON"
+											]?.toString()} // Ensure it's a string
+											onChangeText={
+												(text) =>
+													handleInputChange(
+														"container_count",
+														parseInt(text.replace(/[^0-9]/g, "")) || 0
+													) // Ensure it's a number
+											}
+											placeholder="Available Containers"
+											keyboardType="numeric" // Ensure numeric keyboard is shown
+										/>
+									</View>
 
-								{/* <Text style={styles.resultMssText}>
-									<Image
-										style={{ width: 30, height: 30 }}
-										source={require("../assets/missing_gallons.png")}
-									/>{" "}
-									Missing Containers:
-								</Text>
-                <TextInput
-										style={{
-											padding: 12,
-											borderColor: "gray",
-                      color: "red",
-                      fontSize: 16,
-											borderWidth: 1,
-											borderRadius: 8,
-											marginBottom: 10,
-										}}
-										value={scannedResult.container_predictions["MISSING GALLON"]?.toString()} // Ensure it's a string
-										onChangeText={
-											(text) =>
-												handleInputChange(
-													"container_count",
-													parseInt(text.replace(/[^0-9]/g, "")) || 0 
-												) // Ensure it's a number
-										}
-										placeholder="Number of Missing Containers"
-										keyboardType="numeric" // Ensure numeric keyboard is shown
-									>
-                  </TextInput> */}
+									<View style={{ width: "48%" }}>
+										<Text style={styles.resultMssText}>
+											<Image
+												style={{ width: 20, height: 20 }}
+												source={require("../assets/missing_gallons.png")}
+											/>{" "}
+											Missing Containers:
+										</Text>
+										<TextInput
+											style={{
+												padding: 8,
+												borderColor: "gray",
+												color: "red",
+												fontSize: 16,
+												borderWidth: 1,
+												borderRadius: 8,
+												marginBottom: 10,
+											}}
+											value={scannedResult.container_predictions[
+												"MISSING GALLON"
+											]?.toString()} // Ensure it's a string
+											onChangeText={
+												(text) =>
+													handleInputChange(
+														"container_count",
+														parseInt(text.replace(/[^0-9]/g, "")) || 0
+													) // Ensure it's a number
+											}
+											placeholder="Missing Containers"
+											keyboardType="numeric" // Ensure numeric keyboard is shown
+										/>
+									</View>
+								</View>
 							</View>
-							{/* <Text style={styles.resultText}>Image:</Text> */}
+
+							<Text style={styles.resultText}>Scanned Image:</Text>
 							<Image
 								style={styles.scannedImage}
 								source={{ uri: scannedResult.image }}
@@ -1009,7 +1090,7 @@ const Dashboard = () => {
 								style={styles.logoutButton}
 								onPress={handleUpdateContainers}
 							>
-								<Text style={styles.logoutButtonText}>Submit Result</Text>
+								<Text style={styles.logoutButtonText}>Update Container</Text>
 							</TouchableOpacity>
 						</Animated.View>
 					</PanGestureHandler>
@@ -1080,14 +1161,14 @@ const styles = StyleSheet.create({
 	welcomeDescription: {
 		color: "#8d8d8d",
 	},
-  statistics: {
-    flexDirection: "column",
-    justifyContent: "space-between",
-    // marginBottom: 16,
-    // padding: 12,
-    // backgroundColor: "#fff",
-    // borderRadius: 12,
-  },
+	statistics: {
+		flexDirection: "column",
+		justifyContent: "space-between",
+		// marginBottom: 16,
+		// padding: 12,
+		// backgroundColor: "#fff",
+		// borderRadius: 12,
+	},
 	transactionHeader: {
 		flexDirection: "row",
 		justifyContent: "space-between",
@@ -1177,7 +1258,7 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 4,
 		justifyContent: "flex-end",
-    marginBottom: 6,
+		marginBottom: 6,
 	},
 	refreshText: {
 		color: "gray",
@@ -1339,7 +1420,8 @@ const styles = StyleSheet.create({
 		borderTopLeftRadius: 16,
 		borderTopRightRadius: 16,
 		alignItems: "start",
-		padding: 16,
+		paddingHorizontal: 16,
+		paddingTop: 10,
 		zIndex: 15,
 	},
 	handle: {
@@ -1347,7 +1429,7 @@ const styles = StyleSheet.create({
 		height: 5,
 		backgroundColor: "#ccc",
 		borderRadius: 3,
-		marginVertical: 8,
+		marginVertical: 4,
 		alignSelf: "center",
 	},
 	drawerContent: {
@@ -1365,34 +1447,40 @@ const styles = StyleSheet.create({
 		marginTop: 10,
 	},
 	resultText: {
-		fontSize: 24,
+		fontSize: 18,
 		fontWeight: "bold",
 		color: "#8D8D8D",
 	},
 	resultFixedText: {
-		fontSize: 18,
+		fontSize: 16,
 		marginBottom: 10,
 		fontWeight: "400",
 		color: "green",
+    flexDirection: "row",
 	},
 	resultDmgText: {
-		fontSize: 18,
+		fontSize: 16,
 		marginBottom: 10,
 		fontWeight: "400",
 		color: "red",
 	},
-	resultMssText: {
-		fontSize: 18,
-		marginBottom: 10,
-		fontWeight: "400",
-		color: "orange",
-	},
+  resultAvailText: {
+    fontSize: 16,
+    marginBottom: 10,
+    fontWeight: "400",
+    color: "green",
+  },
+  resultMssText: {
+    fontSize: 16,
+    marginBottom: 10,
+    fontWeight: "400",
+    color: "orange",
+  },
 	scannedImage: {
 		width: "100%",
 		height: "40%",
 		borderRadius: 12,
-		marginTop: 10,
-		marginVertical: 20,
+		marginVertical: 10,
 		zIndex: 10,
 	},
 	editButton: {
