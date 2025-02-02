@@ -72,8 +72,8 @@ const Dashboard = () => {
 	const [scannedResultFormData, setScannedResultFormData] = useState({
 		fixed_gallons: null,
 		broken_gallons: null,
-    is_available: null,
-    is_inUse: null,
+		is_available: null,
+		is_inUse: null,
 	});
 
 	const checkSession = async () => {
@@ -104,7 +104,7 @@ const Dashboard = () => {
 			.from("transactions")
 			.select("*")
 			.eq("employee_id", sessionData.employee_id)
-      .order("created_at", { ascending: false });
+			.order("created_at", { ascending: false });
 
 		if (error) {
 			console.error("Error fetching transactions:", error);
@@ -132,17 +132,22 @@ const Dashboard = () => {
 
 		if (data) {
 			// Count the number of containers with is_available "TRUE" and "FALSE"
-      const containerCount = data.length;
+			const containerCount = data.length;
 			const availableCount = data.filter(
 				(container) => container.is_available === true
 			).length;
 			const inUseCount = data.filter(
 				(container) => container.is_available === false
 			).length;
-      const lostCount = data.filter(
-        (container) => container.is_lost === true
-      ).length;
-			setContainersData({ containerCount, availableCount, inUseCount, lostCount });
+			const lostCount = data.filter(
+				(container) => container.is_lost === true
+			).length;
+			setContainersData({
+				containerCount,
+				availableCount,
+				inUseCount,
+				lostCount,
+			});
 		}
 	};
 
@@ -163,10 +168,10 @@ const Dashboard = () => {
 			station_id: sessionData.station_id,
 		});
 
-    if (transactionFormData.container_count > containersData.availableCount) {
-      alert("Not enough containers available for transaction.");
-      return;
-    }
+		if (transactionFormData.container_count > containersData.availableCount) {
+			alert("Not enough containers available for transaction.");
+			return;
+		}
 
 		try {
 			const { error } = await supabase.from("transactions").insert([
@@ -179,18 +184,20 @@ const Dashboard = () => {
 
 			if (error) {
 				console.error("Supabase error:", error);
+				alert("Database error. Please try again.");
 				throw new Error(error.message || "Unexpected API response format");
 			} else {
 				console.log("Transaction added successfully!");
 				setTimeout(() => runOnJS(setIsVisible)(false), 2000);
 				if (setIsVisible === false) {
 					translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
-					Toast.show({
-						type: "success",
-						text1: "Success",
-						text2: "Transaction added successfully!",
-						visibilityTime: 2000,
-					});
+					// Toast.show({
+					// 	type: "success",
+					// 	text1: "Success",
+					// 	text2: "Transaction added successfully!",
+					// 	visibilityTime: 2000,
+					// });
+					alert("Transaction added successfully!");
 
 					// Reset form after successful submission
 					setTransactionFormData({
@@ -204,12 +211,13 @@ const Dashboard = () => {
 		} catch (error) {
 			console.error("Unexpected error:", error);
 
-			Toast.show({
-				type: "error",
-				text1: "Error",
-				text2: error.message || "Adding went wrong. Please try again.",
-				visibilityTime: 3000,
-			});
+			// Toast.show({
+			// 	type: "error",
+			// 	text1: "Error",
+			// 	text2: error.message || "Adding went wrong. Please try again.",
+			// 	visibilityTime: 3000,
+			// });
+			alert("Adding went wrong. Please try again.");
 		}
 	};
 
@@ -321,10 +329,10 @@ const Dashboard = () => {
 			transaction_id: selectedTransactionId, // Use the stored transaction ID
 		});
 
-    if (transactionFormData.container_count > containersData.availableCount) {
-      alert("Not enough containers available for transaction.");
-      return;
-    }
+		if (transactionFormData.container_count > containersData.availableCount) {
+			alert("Not enough containers available for transaction.");
+			return;
+		}
 
 		try {
 			const { error } = await supabase
@@ -347,12 +355,13 @@ const Dashboard = () => {
 				setTimeout(() => runOnJS(setIsEditVisible)(false), 2000);
 				if (setIsEditVisible === false) {
 					translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
-					Toast.show({
-						type: "success",
-						text1: "Success",
-						text2: "Transaction edited successfully!",
-						visibilityTime: 2000,
-					});
+					// Toast.show({
+					// 	type: "success",
+					// 	text1: "Success",
+					// 	text2: "Transaction edited successfully!",
+					// 	visibilityTime: 2000,
+					// });
+					alert("Transaction edited successfully!");
 
 					// Reset form after successful submission
 					setTransactionFormData({
@@ -367,215 +376,239 @@ const Dashboard = () => {
 		} catch (error) {
 			console.error("Unexpected error:", error);
 
-			Toast.show({
-				type: "error",
-				text1: "Error",
-				text2: error.message || "Editing went wrong. Please try again.",
-				visibilityTime: 3000,
-			});
+			// Toast.show({
+			// 	type: "error",
+			// 	text1: "Error",
+			// 	text2: error.message || "Editing went wrong. Please try again.",
+			// 	visibilityTime: 3000,
+			// });
+
+			alert("Editing went wrong. Please try again.");
 		}
 	};
 
 	const handleUpdateContainers = async () => {
-    try {
+		try {
+			//Check if there are any containers to update
+			if (
+				scannedResultFormData.broken_gallons === 0 &&
+				scannedResultFormData.fixed_gallons === 0 &&
+				scannedResultFormData.is_available === 0 &&
+				scannedResultFormData.is_inUse === 0
+			) {
+				console.log("No containers to update.");
+				alert("No containers to update.");
+				return;
+			}
 
-        //Check if there are any containers to update
-        if (scannedResultFormData.broken_gallons === 0 && 
-            scannedResultFormData.fixed_gallons === 0 &&
-            scannedResultFormData.is_available === 0 &&
-            scannedResultFormData.is_inUse === 0) {
-            console.log("No containers to update.");
-            return;
-        }
+			//Updating Fixed Containers to Damage Containers
+			if (scannedResultFormData.broken_gallons > 0) {
+				const { data: damagedContainers, error: fetchFixedError } =
+					await supabase.rpc("get_random_fixed_containers", {
+						limit_count: scannedResultFormData.broken_gallons,
+					});
 
-        //Updating Fixed Containers to Damage Containers
-        if (scannedResultFormData.broken_gallons > 0) {
-            const { data: damagedContainers, error: fetchFixedError } = await supabase.rpc(
-                "get_random_fixed_containers",
-                {
-                    limit_count: scannedResultFormData.broken_gallons,
-                }
-            );
+				if (fetchFixedError) {
+					console.error("Error fetching fixed containers:", fetchFixedError);
+					return;
+				}
 
-            if (fetchFixedError) {
-                console.error("Error fetching fixed containers:", fetchFixedError);
-                return;
-            }
+				if (damagedContainers.length === 0) {
+					console.log("No fixed containers found to update.");
+					alert("No fixed containers found to update.");
+					return;
+				}
 
-            if (damagedContainers.length === 0) {
-                console.log("No fixed containers found to update.");
-                return;
-            }
+				if (scannedResultFormData.broken_gallons > damagedContainers.length) {
+					console.log("Not enough fixed containers to update.");
+					alert("Not enough fixed containers to update.");
+					return;
+				}
 
-            if (scannedResultFormData.broken_gallons > damagedContainers.length) {
-                console.log("Not enough fixed containers to update.");
-                return;
-            }
+				const damageContainerIds = damagedContainers.map(
+					(container) => container.container_id
+				);
 
-            const damageContainerIds = damagedContainers.map(
-                (container) => container.container_id
-            );
+				const { error: updateDmgError } = await supabase
+					.from("containers")
+					.update({
+						dmg_containers: true,
+						employee_id: sessionData.employee_id,
+					})
+					.in("container_id", damageContainerIds)
+					.eq("is_lost", false)
+					.eq("station_id", sessionData.station_id);
 
-            const { error: updateDmgError } = await supabase
-                .from("containers")
-                .update({ dmg_containers: true, employee_id: sessionData.employee_id })
-                .in("container_id", damageContainerIds)
-                .eq("is_lost", false)
-                .eq("station_id", sessionData.station_id);
+				if (updateDmgError) {
+					console.error("Error updating fixed containers:", updateDmgError);
+					alert("Error updating) fixed containers.");
+					return;
+				} else {
+					console.log("Fixed containers updated to Damaged successfully!");
+					alert("Fixed containers updated to Damaged successfully!");
+				}
+			} else {
+				console.log(
+					"No damaged gallons to update. Skipping damaged containers logic."
+				);
+			}
 
-            if (updateDmgError) {
-                console.error("Error updating fixed containers:", updateDmgError);
-                return;
-            } else {
-                console.log("Fixed containers updated to Damaged successfully!");
-            }
-        } else {
-            console.log("No damaged gallons to update. Skipping damaged containers logic.");
-        }
-        
-        //Updating Damaged Containers to Fixed Containers
-        if (scannedResultFormData.fixed_gallons > 0) {
-            const { data: fixedContainers, error: fetchDmgError } = await supabase.rpc(
-                "get_random_damaged_containers",
-                {
-                    limit_count: scannedResultFormData.fixed_gallons,
-                }
-            );
+			//Updating Damaged Containers to Fixed Containers
+			if (scannedResultFormData.fixed_gallons > 0) {
+				const { data: fixedContainers, error: fetchDmgError } =
+					await supabase.rpc("get_random_damaged_containers", {
+						limit_count: scannedResultFormData.fixed_gallons,
+					});
 
-            if (fetchDmgError) {
-                console.error("Error fetching damaged containers:", fetchDmgError);
-                return;
-            }
+				if (fetchDmgError) {
+					console.error("Error fetching damaged containers:", fetchDmgError);
+					return;
+				}
 
-            if (fixedContainers.length === 0) {
-                console.log("No damaged containers found to update.");
-                return;
-            }
+				if (fixedContainers.length === 0) {
+					console.log("No damaged containers found to update.");
+					alert("No damaged containers found to update.");
+					return;
+				}
 
-            if (scannedResultFormData.fixed_gallons > fixedContainers.length) {
-                console.log("Not enough damaged containers to update.");
-                return;
-            }
+				if (scannedResultFormData.fixed_gallons > fixedContainers.length) {
+					console.log("Not enough damaged containers to update.");
+					alert("Not enough damaged containers to update.");
+					return;
+				}
 
-            // Step 2: Extract container IDs
-            const fixedContainerIds = fixedContainers.map(
-                (container) => container.container_id
-            );
+				const fixedContainerIds = fixedContainers.map(
+					(container) => container.container_id
+				);
 
-            // Step 3: Update the selected containers
-            const { error: updateFixedError } = await supabase
-                .from("containers")
-                .update({ dmg_containers: false, employee_id: sessionData.employee_id })
-                .in("container_id", fixedContainerIds)
-                .eq("is_lost", false)
-                .eq("station_id", sessionData.station_id);
+				const { error: updateFixedError } = await supabase
+					.from("containers")
+					.update({
+						dmg_containers: false,
+						employee_id: sessionData.employee_id,
+					})
+					.in("container_id", fixedContainerIds)
+					.eq("is_lost", false)
+					.eq("station_id", sessionData.station_id);
 
-            if (updateFixedError) {
-                console.error("Error updating fixed containers:", updateFixedError);
-                return;
-            } else {
-                console.log("Damaged containers updated to fixed successfully!");
-            }
-        } else {
-            console.log("No fixed gallons to update. Skipping fixed containers logic.");
-        }
+				if (updateFixedError) {
+					console.error("Error updating fixed containers:", updateFixedError);
+					return;
+				} else {
+					console.log("Damaged containers updated to fixed successfully!");
+					alert("Damaged containers updated to fixed successfully!");
+				}
+			} else {
+				console.log(
+					"No fixed gallons to update. Skipping fixed containers logic."
+				);
+			}
 
-        //Updating Available Containers to In-Use Containers
-        if (scannedResultFormData.is_available > 0) {
-            const { data: inUseContainers, error: fetchAvailError } = await supabase.rpc(
-                "get_random_unavailable_containers",
-                {
-                    limit_count: scannedResultFormData.is_available,
-                }
-            );
+			//Updating Available Containers to In-Use Containers
+			if (scannedResultFormData.is_available > 0) {
+				const { data: inUseContainers, error: fetchAvailError } =
+					await supabase.rpc("get_random_unavailable_containers", {
+						limit_count: scannedResultFormData.is_available,
+					});
 
-            if (fetchAvailError) {
-                console.error("Error fetching in-use containers:", fetchAvailError);
-                return;
-            }
+				if (fetchAvailError) {
+					console.error("Error fetching in-use containers:", fetchAvailError);
+					return;
+				}
 
-            if (inUseContainers.length === 0) {
-                console.log("No in-use containers found to update.");
-                return;
-            }
+				if (inUseContainers.length === 0) {
+					console.log("No in-use containers found to update.");
+					alert("No in-use containers found to update.");
+					return;
+				}
 
-            if (scannedResultFormData.is_available > inUseContainers.length) {
-                console.log("Not enough in-use containers to update.");
-                return;
-            }
+				if (scannedResultFormData.is_available > inUseContainers.length) {
+					console.log("Not enough in-use containers to update.");
+					alert("Not enough in-use containers to update.");
+					return;
+				}
 
-            const inUseContainerIds = inUseContainers.map(
-                (inUseContainer) => inUseContainer.container_id
-            );
+				const inUseContainerIds = inUseContainers.map(
+					(inUseContainer) => inUseContainer.container_id
+				);
 
-            const { error: updateInUseError } = await supabase
-                .from("containers")
-                .update({ is_available: true, employee_id: sessionData.employee_id })
-                .in("container_id", inUseContainerIds)
-                .eq("is_lost", false)
-                .eq("station_id", sessionData.station_id);
+				const { error: updateInUseError } = await supabase
+					.from("containers")
+					.update({ is_available: true, employee_id: sessionData.employee_id })
+					.in("container_id", inUseContainerIds)
+					.eq("is_lost", false)
+					.eq("station_id", sessionData.station_id);
 
-            if (updateInUseError) {
-                console.error("Error updating in-use containers:", updateInUseError);
-                return;
-            } else {
-                console.log("In-use containers updated successfully!");
-            }
-        } else {
-            console.log("No unavailable containers to update. Skipping in-use containers logic.");
-        }
-        
-        //Updating In-Use Containers to Available Containers
-        if (scannedResultFormData.is_inUse > 0) {
-            const { data: availableContainers, error: fetchInUseError } = await supabase.rpc(
-                "get_random_available_containers",
-                {
-                    limit_count: scannedResultFormData.is_inUse,
-                }
-            );
+				if (updateInUseError) {
+					console.error("Error updating in-use containers:", updateInUseError);
+					return;
+				} else {
+					console.log("In-use containers updated successfully!");
+					alert("In-use containers updated successfully!");
+				}
+			} else {
+				console.log(
+					"No unavailable containers to update. Skipping in-use containers logic."
+				);
+			}
 
-            if (fetchInUseError) {
-                console.error("Error fetching in-use containers:", fetchInUseError);
-                return;
-            }
+			//Updating In-Use Containers to Available Containers
+			if (scannedResultFormData.is_inUse > 0) {
+				const { data: availableContainers, error: fetchInUseError } =
+					await supabase.rpc("get_random_available_containers", {
+						limit_count: scannedResultFormData.is_inUse,
+					});
 
-            if (availableContainers.length === 0) {
-                console.log("No in-use containers found to update.");
-                return;
-            }
+				if (fetchInUseError) {
+					console.error("Error fetching in-use containers:", fetchInUseError);
+					return;
+				}
 
-            if (scannedResultFormData.is_available > availableContainers.length) {
-                console.log("Not enough 'Available' containers to update.");
-                return;
-            }
+				if (availableContainers.length === 0) {
+					console.log("No in-use containers found to update.");
+					alert("No in-use containers found to update.");
+					return;
+				}
 
-            const availableContainerIds = availableContainers.map(
-                (availContainer) => availContainer.container_id
-            );
+				if (scannedResultFormData.is_available > availableContainers.length) {
+					console.log("Not enough 'Available' containers to update.");
+					alert("Not enough 'Available' containers to update.");
+					return;
+				}
 
-            const { error: updateAvailableError } = await supabase
-                .from("containers")
-                .update({ is_available: false, employee_id: sessionData.employee_id })
-                .in("container_id", availableContainerIds)
-                .eq("is_lost", false)
-                .eq("station_id", sessionData.station_id);
+				const availableContainerIds = availableContainers.map(
+					(availContainer) => availContainer.container_id
+				);
 
-            if (updateAvailableError) {
-                console.error("Error updating in-use containers:", updateAvailableError);
-                return;
-            } else {
-                console.log("Available containers updated successfully!");
-            }
-        } else {
-            console.log("No 'available' containers to update. Skipping available containers logic.");
-        }
+				const { error: updateAvailableError } = await supabase
+					.from("containers")
+					.update({ is_available: false, employee_id: sessionData.employee_id })
+					.in("container_id", availableContainerIds)
+					.eq("is_lost", false)
+					.eq("station_id", sessionData.station_id);
 
-        // Hide the result after a delay
-        setTimeout(() => runOnJS(setIsResultVisible)(false), 300);
-    } catch (error) {
-        console.error("Unexpected error:", error);
-    }
-};
+				if (updateAvailableError) {
+					console.error(
+						"Error updating in-use containers:",
+						updateAvailableError
+					);
+					return;
+				} else {
+					console.log("Available containers updated successfully!");
+					alert("Available containers updated successfully!");
+				}
+			} else {
+				console.log(
+					"No 'available' containers to update. Skipping available containers logic."
+				);
+			}
+
+			// Hide the result after a delay
+			setTimeout(() => runOnJS(setIsResultVisible)(false), 300);
+		} catch (error) {
+			console.error("Unexpected error:", error);
+		}
+	};
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: translateY.value }],
@@ -669,7 +702,7 @@ const Dashboard = () => {
 
 	const handleRefresh = () => {
 		fetchTransactions();
-    fetchContainers();
+		fetchContainers();
 	};
 
 	useEffect(() => {
@@ -906,8 +939,7 @@ const Dashboard = () => {
 										}
 										placeholder="Number of Containers"
 										keyboardType="numeric" // Ensure numeric keyboard is shown
-                    returnKeyType="done"
-                    
+										returnKeyType="done"
 									/>
 									<Text>Delivery Location:</Text>
 									<TextInput
@@ -1031,7 +1063,7 @@ const Dashboard = () => {
 										}
 										placeholder="Number of Containers"
 										keyboardType="numeric" // Ensure numeric keyboard is shown
-                    returnKeyType="done"
+										returnKeyType="done"
 									/>
 									<Text>Delivery Location:</Text>
 									<TextInput
@@ -1102,26 +1134,26 @@ const Dashboard = () => {
 
 							<Text style={styles.resultText}>Scanned Result:</Text>
 
-              <View style={{flexDirection: "column"}}>
-                <Text style={{ color: "blue" }}>
-                  All Containers:{" "}
-                  <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-                    {containersData.containerCount}
-                  </Text>
-                </Text>
-                <Text style={{ color: "green" }}>
-                  Available:{" "}
-                  <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-                    {containersData.availableCount}
-                  </Text>
-                </Text>
-                <Text style={{ color: "orange" }}>
-                  In-use:{" "}
-                  <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-                    {containersData.inUseCount}
-                  </Text>
-                </Text>
-              </View>
+							<View style={{ flexDirection: "column" }}>
+								<Text style={{ color: "blue" }}>
+									All Containers:{" "}
+									<Text style={{ fontSize: 18, fontWeight: "bold" }}>
+										{containersData.containerCount}
+									</Text>
+								</Text>
+								<Text style={{ color: "green" }}>
+									Available:{" "}
+									<Text style={{ fontSize: 18, fontWeight: "bold" }}>
+										{containersData.availableCount}
+									</Text>
+								</Text>
+								<Text style={{ color: "orange" }}>
+									In-use:{" "}
+									<Text style={{ fontSize: 18, fontWeight: "bold" }}>
+										{containersData.inUseCount}
+									</Text>
+								</Text>
+							</View>
 
 							<View style={styles.resultTextContainer}>
 								<View
@@ -1227,7 +1259,7 @@ const Dashboard = () => {
 											}
 											placeholder="Available Containers"
 											keyboardType="numeric" // Ensure numeric keyboard is shown
-                      returnKeyType="done"
+											returnKeyType="done"
 										/>
 									</View>
 
@@ -1259,7 +1291,7 @@ const Dashboard = () => {
 											}
 											placeholder="In-use Containers"
 											keyboardType="numeric" // Ensure numeric keyboard is shown
-                      returnKeyType="done"
+											returnKeyType="done"
 										/>
 									</View>
 								</View>
@@ -1643,7 +1675,7 @@ const styles = StyleSheet.create({
 		marginBottom: 6,
 		fontWeight: "400",
 		color: "green",
-    flexDirection: "row",
+		flexDirection: "row",
 	},
 	resultDmgText: {
 		fontSize: 16,
@@ -1651,18 +1683,18 @@ const styles = StyleSheet.create({
 		fontWeight: "400",
 		color: "red",
 	},
-  resultAvailText: {
-    fontSize: 16,
-    marginBottom: 6,
-    fontWeight: "400",
-    color: "green",
-  },
-  resultMssText: {
-    fontSize: 16,
-    marginBottom: 6,
-    fontWeight: "400",
-    color: "orange",
-  },
+	resultAvailText: {
+		fontSize: 16,
+		marginBottom: 6,
+		fontWeight: "400",
+		color: "green",
+	},
+	resultMssText: {
+		fontSize: 16,
+		marginBottom: 6,
+		fontWeight: "400",
+		color: "orange",
+	},
 	scannedImage: {
 		width: "100%",
 		height: "40%",
