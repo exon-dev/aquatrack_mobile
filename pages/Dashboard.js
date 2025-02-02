@@ -103,7 +103,8 @@ const Dashboard = () => {
 		const { data, error } = await supabase
 			.from("transactions")
 			.select("*")
-			.eq("employee_id", sessionData.employee_id);
+			.eq("employee_id", sessionData.employee_id)
+      .order("created_at", { ascending: false });
 
 		if (error) {
 			console.error("Error fetching transactions:", error);
@@ -674,12 +675,6 @@ const Dashboard = () => {
 	}, [scannedResult]);
 
 	useEffect(() => {
-		if (scanResult) {
-			console.log("Updated Scan Result:", scanResult);
-		}
-	}, [scanResult]); // This will log the updated scanResult whenever it changes
-
-	useEffect(() => {
 		checkSession(); // Fetch session data on component mount
 	}, []);
 
@@ -891,7 +886,6 @@ const Dashboard = () => {
 											borderRadius: 8,
 											marginBottom: 10,
 										}}
-										// value={scanResult.container_predictions["FIXED GALLON"]?.toString()} // Ensure it's a string
 										value={transactionFormData.container_count?.toString()} // Ensure it's a string
 										onChangeText={
 											(text) =>
@@ -902,6 +896,8 @@ const Dashboard = () => {
 										}
 										placeholder="Number of Containers"
 										keyboardType="numeric" // Ensure numeric keyboard is shown
+                    returnKeyType="done"
+                    
 									/>
 									<Text>Delivery Location:</Text>
 									<TextInput
@@ -1025,6 +1021,7 @@ const Dashboard = () => {
 										}
 										placeholder="Number of Containers"
 										keyboardType="numeric" // Ensure numeric keyboard is shown
+                    returnKeyType="done"
 									/>
 									<Text>Delivery Location:</Text>
 									<TextInput
