@@ -73,7 +73,7 @@ const Dashboard = () => {
 		fixed_gallons: null,
 		broken_gallons: null,
     is_available: null,
-    missing_gallons: null,
+    is_inUse: null,
 	});
 
 	const checkSession = async () => {
@@ -239,7 +239,7 @@ const Dashboard = () => {
 					});
 
 					const apiResponse = await fetch(
-						"http://192.168.254.109:5000/api/v1/detect",
+						"http://192.168.254.108:5000/api/v1/detect",
 						{
 							method: "POST",
 							headers: {
@@ -362,55 +362,164 @@ const Dashboard = () => {
 	};
 
 	const handleUpdateContainers = async () => {
-		try {
-      
-			// Step 1: Fetch random containers using the PostgreSQL function
-			const { data: containers, error: fetchError } = await supabase.rpc(
-				"get_random_containers",
-				{
-					limit_count: scannedResultFormData.broken_gallons,
-				}
-			);
+    try {
+        // Early exit if there are no broken gallons AND no unavailable containers to update
+        if (scannedResultFormData.broken_gallons === 0 && 
+            scannedResultFormData.is_available === 0 &&
+            scannedResultFormData.is_inUse === 0) {
+            console.log("No broken gallons or unavailable containers to update.");
+            return;
+        }
 
-			if (fetchError) {
-				console.error("Error fetching containers:", fetchError);
-				return;
-			}
+        // Step 1: Fetch and update damaged containers (if broken_gallons > 0)
+        if (scannedResultFormData.broken_gallons > 0) {
+            const { data: damagedContainers, error: fetchFixedError } = await supabase.rpc(
+                "get_random_fixed_containers",
+                {
+                    limit_count: scannedResultFormData.broken_gallons,
+                }
+            );
 
-			if (containers.length === 0) {
-				console.log("No containers found to update.");
-				return;
-			}
+            if (fetchFixedError) {
+                console.error("Error fetching damaged containers:", fetchFixedError);
+                return;
+            }
 
-			if (scannedResultFormData.broken_gallons > containers.length) {
-				console.log("Not enough containers found to update.");
-				return;
-			}
+            if (damagedContainers.length === 0) {
+                console.log("No damaged containers found to update.");
+                return;
+            }
 
-			// Step 2: Extract container IDs
-			const containerIds = containers.map(
-				(container) => container.container_id
-			);
+            if (scannedResultFormData.broken_gallons > damagedContainers.length) {
+                console.log("Not enough damaged containers to update.");
+                return;
+            }
 
-			// Step 3: Update the selected containers
-			const { data, error: updateError } = await supabase
-				.from("containers")
-				.update({ dmg_containers: true })
-				.in("container_id", containerIds)
-				.eq("station_id", sessionData.station_id)
-				.eq("employee_id", sessionData.employee_id);
+            // Step 2: Extract container IDs
+            const damageContainerIds = damagedContainers.map(
+                (container) => container.container_id
+            );
 
-			if (updateError) {
-				console.error("Error updating containers:", updateError);
-				return;
-			} else {
-				console.log("Containers updated successfully!");
+            // Step 3: Update the selected containers
+            const { error: updateDmgError } = await supabase
+                .from("containers")
+                .update({ dmg_containers: true })
+                .in("container_id", damageContainerIds)
+                .eq("is_lost", false)
+                .eq("station_id", sessionData.station_id)
+                .eq("employee_id", sessionData.employee_id);
+
+            if (updateDmgError) {
+                console.error("Error updating damaged containers:", updateDmgError);
+                return;
+            } else {
+                console.log("Damaged containers updated successfully!");
+            }
+        } else {
+            console.log("No broken gallons to update. Skipping damaged containers logic.");
+        }
+
+        // Step 4: Fetch and update in-use containers (if is_available > 0)
+        if (scannedResultFormData.is_available > 0) {
+            const { data: inUseContainers, error: fetchAvailError } = await supabase.rpc(
+                "get_random_unavailable_containers",
+                {
+                    limit_count: scannedResultFormData.is_available,
+                }
+            );
+
+            if (fetchAvailError) {
+                console.error("Error fetching in-use containers:", fetchAvailError);
+                return;
+            }
+
+            if (inUseContainers.length === 0) {
+                console.log("No in-use containers found to update.");
+                return;
+            }
+
+            if (scannedResultFormData.is_available > inUseContainers.length) {
+                console.log("Not enough in-use containers to update.");
+                return;
+            }
+
+            // Step 5: Extract container IDs
+            const inUseContainerIds = inUseContainers.map(
+                (inUseContainer) => inUseContainer.container_id
+            );
+
+            // Step 6: Update the selected containers
+            const { error: updateInUseError } = await supabase
+                .from("containers")
+                .update({ is_available: true })
+                .in("container_id", inUseContainerIds)
+                .eq("is_lost", false)
+                .eq("station_id", sessionData.station_id)
+                .eq("employee_id", sessionData.employee_id);
+
+            if (updateInUseError) {
+                console.error("Error updating in-use containers:", updateInUseError);
+                return;
+            } else {
+                console.log("In-use containers updated successfully!");
+            }
+        } else {
+            console.log("No unavailable containers to update. Skipping in-use containers logic.");
+        }
+        
+        if (scannedResultFormData.is_inUse > 0) {
+            const { data: availableContainers, error: fetchInUseError } = await supabase.rpc(
+                "get_random_available_containers",
+                {
+                    limit_count: scannedResultFormData.is_inUse,
+                }
+            );
+
+            if (fetchInUseError) {
+                console.error("Error fetching in-use containers:", fetchInUseError);
+                return;
+            }
+
+            if (availableContainers.length === 0) {
+                console.log("No in-use containers found to update.");
+                return;
+            }
+
+            if (scannedResultFormData.is_available > availableContainers.length) {
+                console.log("Not enough 'Available' containers to update.");
+                return;
+            }
+
+            // Step 5: Extract container IDs
+            const availableContainerIds = availableContainers.map(
+                (availContainer) => availContainer.container_id
+            );
+
+            // Step 6: Update the selected containers
+            const { error: updateAvailableError } = await supabase
+                .from("containers")
+                .update({ is_available: false })
+                .in("container_id", availableContainerIds)
+                .eq("is_lost", false)
+                .eq("station_id", sessionData.station_id)
+                .eq("employee_id", sessionData.employee_id);
+
+            if (updateAvailableError) {
+                console.error("Error updating in-use containers:", updateAvailableError);
+                return;
+            } else {
+                console.log("Available containers updated successfully!");
+            }
+        } else {
+            console.log("No 'available' containers to update. Skipping available containers logic.");
+        }
+
+        // Hide the result after a delay
         setTimeout(() => runOnJS(setIsResultVisible)(false), 300);
-			}
-		} catch (error) {
-			console.error("Unexpected error:", error);
-		}
-	};
+    } catch (error) {
+        console.error("Unexpected error:", error);
+    }
+};
 
 	const animatedStyle = useAnimatedStyle(() => ({
 		transform: [{ translateY: translateY.value }],
@@ -953,7 +1062,7 @@ const Dashboard = () => {
 											style={{
 												padding: 8,
 												borderColor: "gray",
-												color: "red",
+												color: "green",
 												fontSize: 16,
 												borderWidth: 1,
 												borderRadius: 8,
@@ -1022,24 +1131,23 @@ const Dashboard = () => {
 											style={{
 												padding: 8,
 												borderColor: "gray",
-												color: "red",
+												color: "green",
 												fontSize: 16,
 												borderWidth: 1,
 												borderRadius: 8,
 												marginBottom: 10,
 											}}
-											value={scannedResult.container_predictions[
-												"AVAILABLE GALLON"
-											]?.toString()} // Ensure it's a string
+											value={scannedResultFormData.is_available?.toString()} // Ensure it's a string
 											onChangeText={
 												(text) =>
-													handleInputChange(
-														"container_count",
+													handleScannedInputChange(
+														"is_available",
 														parseInt(text.replace(/[^0-9]/g, "")) || 0
 													) // Ensure it's a number
 											}
 											placeholder="Available Containers"
 											keyboardType="numeric" // Ensure numeric keyboard is shown
+                      returnKeyType="done"
 										/>
 									</View>
 
@@ -1049,30 +1157,29 @@ const Dashboard = () => {
 												style={{ width: 20, height: 20 }}
 												source={require("../assets/missing_gallons.png")}
 											/>{" "}
-											Missing Containers:
+											In-use Containers:
 										</Text>
 										<TextInput
 											style={{
 												padding: 8,
 												borderColor: "gray",
-												color: "red",
+												color: "orange",
 												fontSize: 16,
 												borderWidth: 1,
 												borderRadius: 8,
 												marginBottom: 10,
 											}}
-											value={scannedResult.container_predictions[
-												"MISSING GALLON"
-											]?.toString()} // Ensure it's a string
+											value={scannedResultFormData.is_inUse?.toString()} // Ensure it's a string
 											onChangeText={
 												(text) =>
-													handleInputChange(
-														"container_count",
+													handleScannedInputChange(
+														"is_inUse",
 														parseInt(text.replace(/[^0-9]/g, "")) || 0
 													) // Ensure it's a number
 											}
 											placeholder="Missing Containers"
 											keyboardType="numeric" // Ensure numeric keyboard is shown
+                      returnKeyType="done"
 										/>
 									</View>
 								</View>
