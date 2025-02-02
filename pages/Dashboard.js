@@ -187,6 +187,63 @@ const Dashboard = () => {
 				alert("Database error. Please try again.");
 				throw new Error(error.message || "Unexpected API response format");
 			} else {
+        
+				//Updating Available Containers to In-Use Containers
+				if (transactionFormData.container_count > 0) {
+					const { data: availableContainers, error: fetchAvailError } =
+						await supabase.rpc("get_random_available_containers", {
+							limit_count: transactionFormData.container_count,
+						});
+
+					if (fetchAvailError) {
+						console.error("Error fetching in-use containers:", fetchAvailError);
+						return;
+					}
+
+					if (availableContainers.length === 0) {
+						console.log("No available containers found to update.");
+						alert("No available containers found to update.");
+						return;
+					}
+
+					if (
+						transactionFormData.container_count > availableContainers.length
+					) {
+						console.log("Not enough available containers to update.");
+						alert("Not enough available containers to update.");
+						return;
+					}
+
+					const availableContainerIds = availableContainers.map(
+						(container) => container.container_id
+					);
+
+					const { error: updateAvailError } = await supabase
+						.from("containers")
+						.update({
+							is_available: false,
+							employee_id: sessionData.employee_id,
+						})
+						.in("container_id", availableContainerIds)
+						.eq("is_lost", false)
+						.eq("station_id", sessionData.station_id);
+
+					if (updateAvailError) {
+						console.error(
+							"Error updating available containers:",
+							updateAvailError
+						);
+						return;
+					} else {
+						console.log("Available containers updated to In-use successfully!");
+						alert("Available containers updated to In-use successfully!");
+					}
+				} else {
+					console.log(
+						"No available containers to update. Skipping available containers logic."
+					);
+				}
+
 				console.log("Transaction added successfully!");
 				setTimeout(() => runOnJS(setIsVisible)(false), 2000);
 				if (setIsVisible === false) {
@@ -765,21 +822,21 @@ const Dashboard = () => {
 					}}
 				>
 					<View style={styles.statistics}>
-            {containersData.availableCount === 0 ? (
-              <Text style={{ color: "red", fontSize: 18, fontWeight: "bold" }}>
-                {/* <Text style={{ fontSize: 24, fontWeight: "bold" }}>
+						{containersData.availableCount === 0 ? (
+							<Text style={{ color: "red", fontSize: 18, fontWeight: "bold" }}>
+								{/* <Text style={{ fontSize: 24, fontWeight: "bold" }}>
                   {containersData.availableCount}
                 </Text>{" "} */}
-                Containers Out-of-Stock
-						  </Text>
-            ) : (
-              <Text style={{ color: "green" }}>
-                <Text style={{ fontSize: 24, fontWeight: "bold" }}>
-                  {containersData.availableCount}
-                </Text>{" "}
-                Availble Containers
-              </Text>
-            )}
+								Containers Out-of-Stock
+							</Text>
+						) : (
+							<Text style={{ color: "green" }}>
+								<Text style={{ fontSize: 24, fontWeight: "bold" }}>
+									{containersData.availableCount}
+								</Text>{" "}
+								Availble Containers
+							</Text>
+						)}
 						<Text style={{ color: "orange" }}>
 							<Text style={{ fontSize: 24, fontWeight: "bold" }}>
 								{containersData.inUseCount}
