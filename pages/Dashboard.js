@@ -163,6 +163,11 @@ const Dashboard = () => {
 			station_id: sessionData.station_id,
 		});
 
+    if (transactionFormData.container_count > containersData.availableCount) {
+      alert("Not enough containers available for transaction.");
+      return;
+    }
+
 		try {
 			const { error } = await supabase.from("transactions").insert([
 				{
@@ -315,6 +320,11 @@ const Dashboard = () => {
 			...transactionFormData,
 			transaction_id: selectedTransactionId, // Use the stored transaction ID
 		});
+
+    if (transactionFormData.container_count > containersData.availableCount) {
+      alert("Not enough containers available for transaction.");
+      return;
+    }
 
 		try {
 			const { error } = await supabase
