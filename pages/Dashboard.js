@@ -61,6 +61,11 @@ const Dashboard = () => {
 		{ label: "Delivered", value: "true" },
 		{ label: "In Progress", value: "false" },
 	]);
+	const [isDropdownVisible, setDropdownVisible] = useState(false);
+
+	const toggleDropdown = () => {
+		setDropdownVisible(!isDropdownVisible);
+	};
 
 	const [transactionFormData, setTransactionFormData] = useState({
 		transaction_type: "",
@@ -851,15 +856,46 @@ const Dashboard = () => {
 			<Toast />
 			{/* Sticky Header */}
 			<View style={styles.header}>
-				{/* <Image source={require("../assets/menu_btn.png")} style={styles.menu} /> */}
 				{sessionData && (
-					<View style={styles.avatar}>
-						<Text style={styles.avatarText}>
-							{sessionData.first_name && sessionData.last_name
-								? `${sessionData.first_name[0]}${sessionData.last_name[0]}`
-								: "NA"}
-						</Text>
-					</View>
+					<TouchableOpacity
+						onPress={toggleDropdown}
+						style={styles.avatarContainer}
+					>
+						<View style={styles.avatar}>
+							<Text style={styles.avatarText}>
+								{sessionData.first_name && sessionData.last_name
+									? `${sessionData.first_name[0]}${sessionData.last_name[0]}`
+									: "NA"}
+							</Text>
+						</View>
+
+						{/* Dropdown Menu */}
+						{isDropdownVisible && (
+							<View style={styles.dropdown}>
+                <View style={{flexDirection: "row", alignItems: "center", gap: 4}}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>
+                      {sessionData.first_name && sessionData.last_name
+                        ? `${sessionData.first_name[0]}${sessionData.last_name[0]}`
+                        : "NA"}
+                    </Text>
+                  </View>
+                  <Text>
+                    <Text style={styles.dropdownText}>
+                      {sessionData.first_name} {sessionData.last_name}
+                    </Text>
+                  </Text>
+                </View>
+								<Divider style={{ marginVertical: 16 }} />
+								<TouchableOpacity
+									onPress={handleLogout}
+									style={styles.logoutButton}
+								>
+									<Text style={styles.logoutButtonText}>Logout</Text>
+								</TouchableOpacity>
+							</View>
+						)}
+					</TouchableOpacity>
 				)}
 			</View>
 
@@ -883,7 +919,11 @@ const Dashboard = () => {
 					}}
 				>
 					<View style={styles.statistics}>
-            <Text style={{fontSize: 18,  fontWeight: "bold", color: "#8d8d8d"}}>Containers in your station: </Text>
+						<Text
+							style={{ fontSize: 18, fontWeight: "bold", color: "#8d8d8d" }}
+						>
+							Containers in your station:{" "}
+						</Text>
 						{containersData.availableCount === 0 ? (
 							<Text style={{ color: "red", fontSize: 18, fontWeight: "bold" }}>
 								{/* <Text style={{ fontSize: 24, fontWeight: "bold" }}>
@@ -965,10 +1005,6 @@ const Dashboard = () => {
 						</TouchableOpacity>
 					))}
 				</View>
-
-				<TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-					<Text style={styles.logoutButtonText}>Logout</Text>
-				</TouchableOpacity>
 			</ScrollView>
 
 			<View style={[styles.navbar]}>
@@ -1488,6 +1524,29 @@ const styles = StyleSheet.create({
 		fontSize: 20,
 		textAlign: "center",
 	},
+	dropdown: {
+		position: "absolute",
+		top: 50, // Adjust based on your design
+		left: 0,
+		backgroundColor: "#fff",
+		borderRadius: 5,
+		elevation: 3, // For shadow on Android
+		shadowColor: "#000", // For shadow on iOS
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.2,
+		shadowRadius: 2,
+		padding: 12,
+		minWidth: 180,
+		height: "auto",
+	},
+	dropdownItem: {
+		padding: 10,
+	},
+	dropdownText: {
+		fontSize: 18,
+		fontWeight: "bold",
+		color: "#333",
+	},
 	innerContainer: {
 		justifyContent: "center",
 		paddingHorizontal: 20,
@@ -1844,11 +1903,10 @@ const styles = StyleSheet.create({
 	},
 	logoutButton: {
 		backgroundColor: "#00BCD4",
-		padding: 15,
+		padding: 6,
 		borderRadius: 5,
 		alignItems: "center",
 		width: "100%",
-		marginBottom: 10,
 	},
 	logoutButtonText: {
 		color: "#fff",
