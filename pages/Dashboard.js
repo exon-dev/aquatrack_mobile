@@ -187,7 +187,6 @@ const Dashboard = () => {
 				alert("Database error. Please try again.");
 				throw new Error(error.message || "Unexpected API response format");
 			} else {
-        
 				//Updating Available Containers to In-Use Containers
 				if (transactionFormData.container_count > 0) {
 					const { data: availableContainers, error: fetchAvailError } =
@@ -386,8 +385,11 @@ const Dashboard = () => {
 			transaction_id: selectedTransactionId, // Use the stored transaction ID
 		});
 
-		if (transactionFormData.container_count > containersData.availableCount) {
-			alert("Not enough containers available for transaction.");
+		if (
+			transactionFormData.is_delivered === false
+			// (transactionFormData.container_count > containersData.availableCount)
+		) {
+			alert("Not enough containers 'available' for transaction.");
 			return;
 		}
 
@@ -408,6 +410,65 @@ const Dashboard = () => {
 				console.error("Supabase error:", error);
 				throw new Error(error.message || "Unexpected API response format");
 			} else {
+				//Updating In-Use Containers to Available Containers
+				if (transactionFormData.is_delivered === true) {
+					if (transactionFormData.container_count > 0) {
+						const { data: inUseContainers, error: fetchAvailError } =
+							await supabase.rpc("get_random_unavailable_containers", {
+								limit_count: transactionFormData.container_count,
+							});
+
+						if (fetchAvailError) {
+							console.error(
+								"Error fetching in-use containers:",
+								fetchAvailError
+							);
+							return;
+						}
+
+						if (inUseContainers.length === 0) {
+							console.log("No in-use containers found to update.");
+							alert("No in-use containers found to update.");
+							return;
+						}
+
+						if (transactionFormData.container_count > inUseContainers.length) {
+							console.log("Not enough in-use containers to update.");
+							alert("Not enough in-use containers to update.");
+							return;
+						}
+
+						const inUseContainerIds = inUseContainers.map(
+							(inUseContainer) => inUseContainer.container_id
+						);
+
+						const { error: updateInUseError } = await supabase
+							.from("containers")
+							.update({
+								is_available: true,
+								employee_id: sessionData.employee_id,
+							})
+							.in("container_id", inUseContainerIds)
+							.eq("is_lost", false)
+							.eq("station_id", sessionData.station_id);
+
+						if (updateInUseError) {
+							console.error(
+								"Error updating in-use containers:",
+								updateInUseError
+							);
+							return;
+						} else {
+							console.log("In-use containers updated successfully!");
+							alert("In-use containers updated successfully!");
+						}
+					} else {
+						console.log(
+							"No unavailable containers to update. Skipping in-use containers logic."
+						);
+					}
+				}
+
 				console.log("Transaction edited successfully!");
 				setTimeout(() => runOnJS(setIsEditVisible)(false), 2000);
 				if (setIsEditVisible === false) {
@@ -561,7 +622,7 @@ const Dashboard = () => {
 				);
 			}
 
-			//Updating Available Containers to In-Use Containers
+			//Updating In-use Containers to Available Containers
 			if (scannedResultFormData.is_available > 0) {
 				const { data: inUseContainers, error: fetchAvailError } =
 					await supabase.rpc("get_random_unavailable_containers", {
@@ -609,7 +670,7 @@ const Dashboard = () => {
 				);
 			}
 
-			//Updating In-Use Containers to Available Containers
+			//Updating Available Containers to In-use Containers
 			if (scannedResultFormData.is_inUse > 0) {
 				const { data: availableContainers, error: fetchInUseError } =
 					await supabase.rpc("get_random_available_containers", {
