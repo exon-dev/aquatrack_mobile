@@ -883,6 +883,7 @@ const Dashboard = () => {
 					}}
 				>
 					<View style={styles.statistics}>
+            <Text style={{fontSize: 18,  fontWeight: "bold", color: "#8d8d8d"}}>Containers in your station: </Text>
 						{containersData.availableCount === 0 ? (
 							<Text style={{ color: "red", fontSize: 18, fontWeight: "bold" }}>
 								{/* <Text style={{ fontSize: 24, fontWeight: "bold" }}>
