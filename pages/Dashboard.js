@@ -44,6 +44,7 @@ const Dashboard = () => {
 	const navigation = useNavigation();
 	const [sessionData, setSessionData] = useState(null);
 	const [transactionData, setTransactionData] = useState([]);
+	const [imageUrl, setImageUrl] = useState(null);
 	const [selectedTransactionId, setSelectedTransactionId] = useState(null);
 	const [scannedResult, setScannedResult] = useState(null);
 	const [isVisible, setIsVisible] = useState(false);
@@ -170,7 +171,11 @@ const Dashboard = () => {
 		}
 
 		console.log("Submitting transaction:", {
-			...transactionFormData,
+			transaction_type: transactionFormData.transaction_type,
+			container_count: transactionFormData.container_count,
+			delivery_location: transactionFormData.delivery_location,
+			is_delivered: transactionFormData.is_delivered,
+			image_url: transactionFormData.image_url,
 			employee_id: sessionData.employee_id,
 			station_id: sessionData.station_id,
 		});
@@ -181,9 +186,30 @@ const Dashboard = () => {
 		}
 
 		try {
+			const { data: imageData, error: imgError } = await supabase
+				.from("container_images")
+				.insert([
+					{
+						image_url: imageUrl,
+					},
+				])
+				.select('image_id')
+				.single();
+
+			if (imgError) {
+				console.error("Error uploading image:", imgError);
+				return;
+			}
+
+			const image_id = imageData.image_id;
+
 			const { error } = await supabase.from("transactions").insert([
 				{
-					...transactionFormData,
+					transaction_type: transactionFormData.transaction_type,
+					container_count: transactionFormData.container_count,
+					delivery_location: transactionFormData.delivery_location,
+					is_delivered: transactionFormData.is_delivered,
+					image_id: image_id,
 					employee_id: sessionData.employee_id,
 					station_id: sessionData.station_id,
 				},
@@ -262,29 +288,16 @@ const Dashboard = () => {
 						container_count: null,
 						delivery_location: "",
 						is_delivered: false,
+						image_url: "",
 					});
 
 					translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
-					// Toast.show({
-					// 	type: "success",
-					// 	text1: "Success",
-					// 	text2: "Transaction added successfully!",
-					// 	visibilityTime: 2000,
-					// });
 					alert("Transaction added successfully!");
-
-					// Reset form after successful submission
 				}
 			}
 		} catch (error) {
 			console.error("Unexpected error:", error);
 
-			// Toast.show({
-			// 	type: "error",
-			// 	text1: "Error",
-			// 	text2: error.message || "Adding went wrong. Please try again.",
-			// 	visibilityTime: 3000,
-			// });
 			alert("Adding went wrong. Please try again.");
 		}
 	};
@@ -340,6 +353,9 @@ const Dashboard = () => {
 					setScanResult({
 						container_predictions: responseData.predictions,
 					});
+					setImageUrl(
+						responseData.prediction_image,
+					);
 					console.log(scanResult);
 				} catch (error) {
 					console.log("Error sending image to API:", error);
