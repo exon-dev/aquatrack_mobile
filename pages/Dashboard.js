@@ -80,6 +80,7 @@ const Dashboard = () => {
 		is_available: null,
 		is_inUse: null,
 		is_lost: null,
+		is_found: null,
 	});
 
 	const checkSession = async () => {
@@ -776,6 +777,58 @@ const Dashboard = () => {
 					"No 'is-lost' containers to update. Skipping is-lost containers logic."
 				);
 			}
+			
+			//Updating Lost to Not Lost Containers
+			if (scannedResultFormData.is_found > 0) {
+				const { data: foundContainers, error: fetchFoundError } =
+					await supabase.rpc("get_random_lost_containers", {
+						limit_count: scannedResultFormData.is_found,
+						station: sessionData.station_id,
+					});
+
+				if (fetchFoundError) {
+					console.error("Error fetching 'lost' containers:", fetchFoundError);
+					return;
+				}
+
+				if (foundContainers.length === 0) {
+					console.log("No 'lost' containers found to update.");
+					alert("No 'lost' containers found to update.");
+					return;
+				}
+
+				if (scannedResultFormData.is_found > foundContainers.length) {
+					console.log("Not enough 'lost' containers to update.");
+					alert("Not enough 'lost' containers to update.");
+					return;
+				}
+
+				const inUseContainerIds = foundContainers.map(
+					(container) => container.container_id
+				);
+
+				const { error: updateIsLostError } = await supabase
+					.from("containers")
+					.update({ is_lost: false, employee_id: sessionData.employee_id })
+					.in("container_id", inUseContainerIds)
+					.eq("is_available", true)
+					.eq("station_id", sessionData.station_id);
+
+				if (updateIsLostError) {
+					console.error(
+						"Error updating is-lost containers:",
+						updateIsLostError
+					);
+					return;
+				} else {
+					console.log("Containers updated to lost successfully!");
+					alert("Containers updated to lost successfully!");
+				}
+			} else {
+				console.log(
+					"No 'lost' containers to update. Skipping lost containers logic."
+				);
+			}
 
 			// Hide the result after a delay
 			setTimeout(() => runOnJS(setIsResultVisible)(false), 300);
@@ -1349,7 +1402,7 @@ const Dashboard = () => {
 
 							<Text style={styles.resultText}>Scanned Result:</Text>
 
-							<View style={{ flexDirection: "column" }}>
+							<View style={{ flexDirection: "row", gap: 18 }}>
 								<Text style={{ color: "blue" }}>
 									All Containers:{" "}
 									<Text style={{ fontSize: 18, fontWeight: "bold" }}>
@@ -1393,7 +1446,7 @@ const Dashboard = () => {
 												fontSize: 16,
 												borderWidth: 1,
 												borderRadius: 8,
-												marginBottom: 10,
+												marginBottom: 4,
 											}}
 											value={scannedResultFormData.fixed_gallons?.toString()} // Bind to state
 											onChangeText={(text) =>
@@ -1424,7 +1477,7 @@ const Dashboard = () => {
 												fontSize: 16,
 												borderWidth: 1,
 												borderRadius: 8,
-												marginBottom: 10,
+												marginBottom: 4,
 											}}
 											value={scannedResultFormData.broken_gallons?.toString()} // Bind to state
 											onChangeText={(text) =>
@@ -1446,7 +1499,8 @@ const Dashboard = () => {
 										justifyContent: "space-between",
 									}}
 								>
-									<View style={{ width: "32%" }}>
+									
+									<View style={{ width: "48%" }}>
 										<Text style={styles.resultAvailText}>
 											<Image
 												style={{ width: 20, height: 20 }}
@@ -1462,7 +1516,7 @@ const Dashboard = () => {
 												fontSize: 16,
 												borderWidth: 1,
 												borderRadius: 8,
-												marginBottom: 10,
+												marginBottom: 4,
 											}}
 											value={scannedResultFormData.is_available?.toString()} // Ensure it's a string
 											onChangeText={
@@ -1478,7 +1532,7 @@ const Dashboard = () => {
 										/>
 									</View>
 
-									<View style={{ width: "32%" }}>
+									<View style={{ width: "48%" }}>
 										<Text style={styles.resultUsedText}>
 											<Image
 												style={{ width: 20, height: 20 }}
@@ -1490,11 +1544,11 @@ const Dashboard = () => {
 											style={{
 												padding: 8,
 												borderColor: "gray",
-												color: "orange",
+												color: "#D49A01",
 												fontSize: 16,
 												borderWidth: 1,
 												borderRadius: 8,
-												marginBottom: 10,
+												marginBottom: 4,
 											}}
 											value={scannedResultFormData.is_inUse?.toString()} // Ensure it's a string
 											onChangeText={
@@ -1509,8 +1563,49 @@ const Dashboard = () => {
 											returnKeyType="done"
 										/>
 									</View>
+
+								</View>
+								
+								<View
+									style={{
+										flexDirection: "row",
+										justifyContent: "space-between",
+									}}
+								>
+
+									<View style={{ width: "48%" }}>
+										<Text style={styles.resultFoundText}>
+											<Image
+												style={{ width: 20, height: 20 }}
+												source={require("../assets/used_gallons.png")}
+											/>{" "}
+											Found Containers:
+										</Text>
+										<TextInput
+											style={{
+												padding: 8,
+												borderColor: "gray",
+												color: "blue",
+												fontSize: 16,
+												borderWidth: 1,
+												borderRadius: 8,
+												marginBottom: 4,
+											}}
+											value={scannedResultFormData.is_found?.toString()} // Ensure it's a string
+											onChangeText={
+												(text) =>
+													handleScannedInputChange(
+														"is_found",
+														parseInt(text.replace(/[^0-9]/g, "")) || 0
+													) // Ensure it's a number
+											}
+											placeholder="In-use Containers"
+											keyboardType="numeric" // Ensure numeric keyboard is shown
+											returnKeyType="done"
+										/>
+									</View>
 									
-									<View style={{ width: "32%" }}>
+									<View style={{ width: "48%" }}>
 										<Text style={styles.resultMssText}>
 											<Image
 												style={{ width: 20, height: 20 }}
@@ -1526,7 +1621,7 @@ const Dashboard = () => {
 												fontSize: 16,
 												borderWidth: 1,
 												borderRadius: 8,
-												marginBottom: 10,
+												marginBottom: 4,
 											}}
 											value={scannedResultFormData.is_lost?.toString()} // Ensure it's a string
 											onChangeText={
@@ -1918,7 +2013,7 @@ const styles = StyleSheet.create({
 		height: 5,
 		backgroundColor: "#ccc",
 		borderRadius: 3,
-		marginVertical: 4,
+		marginBottom: 4,
 		alignSelf: "center",
 	},
 	drawerContent: {
@@ -1963,7 +2058,13 @@ const styles = StyleSheet.create({
 		fontSize: 16,
 		marginBottom: 6,
 		fontWeight: "400",
-		color: "yellow",
+		color: "#D49A01",
+	},
+	resultFoundText: {
+		fontSize: 16,
+		marginBottom: 6,
+		fontWeight: "400",
+		color: "blue",
 	},
 	resultMssText: {
 		fontSize: 16,
