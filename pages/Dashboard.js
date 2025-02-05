@@ -147,6 +147,9 @@ const Dashboard = () => {
 			const inUseCount = data.filter(
 				(container) => container.is_available === false
 			).length;
+			const damageCount = data.filter(
+				(container) => container.dmg_containers === true
+			).length;
 			const lostCount = data.filter(
 				(container) => container.is_lost === true
 			).length;
@@ -154,6 +157,7 @@ const Dashboard = () => {
 				containerCount,
 				availableCount,
 				inUseCount,
+				damageCount,
 				lostCount,
 			});
 		}
@@ -273,24 +277,23 @@ const Dashboard = () => {
 						alert("Available containers updated to In-use successfully!");
 					}
 
-					setTimeout(() => runOnJS(setIsVisible)(false), 2000);
-
+					
 				} else {
 					console.log(
 						"No available containers to update. Skipping available containers logic."
 					);
 				}
+				
+				setTimeout(() => runOnJS(setIsVisible)(false), 2000);
 
-				console.log("Transaction added successfully!");
 				if (setIsVisible === false) {
 					setTransactionFormData({
 						transaction_type: "",
 						container_count: null,
 						delivery_location: "",
 						is_delivered: false,
-						image_url: "",
 					});
-
+					
 					translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
 					alert("Transaction added successfully!");
 				}
@@ -1059,13 +1062,19 @@ const Dashboard = () => {
 								Availble Containers
 							</Text>
 						)}
-						<Text style={{ color: "orange" }}>
+						<Text style={{ color: "#d49a01" }}>
 							<Text style={{ fontSize: 24, fontWeight: "bold" }}>
 								{containersData.inUseCount}
 							</Text>{" "}
 							In-use Containers
 						</Text>
 						<Text style={{ color: "red" }}>
+							<Text style={{ fontSize: 24, fontWeight: "bold" }}>
+								{containersData.damageCount}
+							</Text>{" "}
+							Damage Containers
+						</Text>
+						<Text style={{ color: "orange" }}>
 							<Text style={{ fontSize: 24, fontWeight: "bold" }}>
 								{containersData.lostCount}
 							</Text>{" "}
