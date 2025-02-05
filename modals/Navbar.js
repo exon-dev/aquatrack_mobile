@@ -38,7 +38,7 @@ const Navbar = ({ onScannedResult }) => {
             type: fileType,
           });
 
-          const apiResponse = await fetch('http://192.168.254.108:5000/api/v1/detect', {
+          const apiResponse = await fetch('http://192.168.254.109:5000/api/v1/detect', {
             method: 'POST',
             headers: {
               'Content-Type': 'multipart/form-data',

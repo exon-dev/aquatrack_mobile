@@ -192,11 +192,13 @@ const Dashboard = () => {
 				alert("Database error. Please try again.");
 				throw new Error(error.message || "Unexpected API response format");
 			} else {
+
 				//Updating Available Containers to In-Use Containers
-				if (transactionFormData.container_count > 0) {
+				if (transactionFormData.container_count > 0 && transactionFormData.is_delivered === false) {
 					const { data: availableContainers, error: fetchAvailError } =
 						await supabase.rpc("get_random_available_containers", {
 							limit_count: transactionFormData.container_count,
+							station: sessionData.station_id,
 						});
 
 					if (fetchAvailError) {
@@ -242,6 +244,9 @@ const Dashboard = () => {
 						console.log("Available containers updated to In-use successfully!");
 						alert("Available containers updated to In-use successfully!");
 					}
+
+					setTimeout(() => runOnJS(setIsVisible)(false), 2000);
+
 				} else {
 					console.log(
 						"No available containers to update. Skipping available containers logic."
@@ -249,8 +254,14 @@ const Dashboard = () => {
 				}
 
 				console.log("Transaction added successfully!");
-				setTimeout(() => runOnJS(setIsVisible)(false), 2000);
 				if (setIsVisible === false) {
+					setTransactionFormData({
+						transaction_type: "",
+						container_count: null,
+						delivery_location: "",
+						is_delivered: false,
+					});
+
 					translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
 					// Toast.show({
 					// 	type: "success",
@@ -261,12 +272,6 @@ const Dashboard = () => {
 					alert("Transaction added successfully!");
 
 					// Reset form after successful submission
-					setTransactionFormData({
-						transaction_type: "",
-						container_count: null,
-						delivery_location: "",
-						is_delivered: false,
-					});
 				}
 			}
 		} catch (error) {
@@ -318,7 +323,7 @@ const Dashboard = () => {
 					});
 
 					const apiResponse = await fetch(
-						"http://192.168.254.108:5000/api/v1/detect",
+						"http://192.168.254.109:5000/api/v1/detect",
 						{
 							method: "POST",
 							headers: {
@@ -421,6 +426,7 @@ const Dashboard = () => {
 						const { data: inUseContainers, error: fetchAvailError } =
 							await supabase.rpc("get_random_unavailable_containers", {
 								limit_count: transactionFormData.container_count,
+								station: sessionData.station_id
 							});
 
 						if (fetchAvailError) {
@@ -529,6 +535,7 @@ const Dashboard = () => {
 				const { data: damagedContainers, error: fetchFixedError } =
 					await supabase.rpc("get_random_fixed_containers", {
 						limit_count: scannedResultFormData.broken_gallons,
+						station: sessionData.station_id,
 					});
 
 				if (fetchFixedError) {
@@ -581,6 +588,7 @@ const Dashboard = () => {
 				const { data: fixedContainers, error: fetchDmgError } =
 					await supabase.rpc("get_random_damaged_containers", {
 						limit_count: scannedResultFormData.fixed_gallons,
+						station: sessionData.station_id,
 					});
 
 				if (fetchDmgError) {
@@ -632,6 +640,7 @@ const Dashboard = () => {
 				const { data: inUseContainers, error: fetchAvailError } =
 					await supabase.rpc("get_random_unavailable_containers", {
 						limit_count: scannedResultFormData.is_available,
+						station: sessionData.station_id
 					});
 
 				if (fetchAvailError) {
@@ -680,6 +689,7 @@ const Dashboard = () => {
 				const { data: availableContainers, error: fetchInUseError } =
 					await supabase.rpc("get_random_available_containers", {
 						limit_count: scannedResultFormData.is_inUse,
+						station: sessionData.station_id,
 					});
 
 				if (fetchInUseError) {
