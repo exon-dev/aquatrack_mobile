@@ -79,6 +79,7 @@ const Dashboard = () => {
 		broken_gallons: null,
 		is_available: null,
 		is_inUse: null,
+		is_lost: null,
 	});
 
 	const checkSession = async () => {
@@ -484,12 +485,6 @@ const Dashboard = () => {
 				setTimeout(() => runOnJS(setIsEditVisible)(false), 2000);
 				if (setIsEditVisible === false) {
 					translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
-					// Toast.show({
-					// 	type: "success",
-					// 	text1: "Success",
-					// 	text2: "Transaction edited successfully!",
-					// 	visibilityTime: 2000,
-					// });
 					alert("Transaction edited successfully!");
 
 					// Reset form after successful submission
@@ -499,18 +494,11 @@ const Dashboard = () => {
 						delivery_location: "",
 						is_delivered: false,
 					});
-					setSelectedTransactionId(null); // Clear the stored transaction ID
+					setSelectedTransactionId(null);
 				}
 			}
 		} catch (error) {
 			console.error("Unexpected error:", error);
-
-			// Toast.show({
-			// 	type: "error",
-			// 	text1: "Error",
-			// 	text2: error.message || "Editing went wrong. Please try again.",
-			// 	visibilityTime: 3000,
-			// });
 
 			alert("Editing went wrong. Please try again.");
 		}
@@ -523,7 +511,8 @@ const Dashboard = () => {
 				scannedResultFormData.broken_gallons === 0 &&
 				scannedResultFormData.fixed_gallons === 0 &&
 				scannedResultFormData.is_available === 0 &&
-				scannedResultFormData.is_inUse === 0
+				scannedResultFormData.is_inUse === 0 &&
+				scannedResultFormData.is_lost === 0
 			) {
 				console.log("No containers to update.");
 				alert("No containers to update.");
@@ -733,6 +722,58 @@ const Dashboard = () => {
 			} else {
 				console.log(
 					"No 'available' containers to update. Skipping available containers logic."
+				);
+			}
+			
+			//Updating Not Lost to Lost Containers
+			if (scannedResultFormData.is_lost > 0) {
+				const { data: lostContainers, error: fetchInLostError } =
+					await supabase.rpc("get_random_notlost_containers", {
+						limit_count: scannedResultFormData.is_lost,
+						station: sessionData.station_id,
+					});
+
+				if (fetchInLostError) {
+					console.error("Error fetching is-lost containers:", fetchInLostError);
+					return;
+				}
+
+				if (lostContainers.length === 0) {
+					console.log("No is-lost containers found to update.");
+					alert("No is-lost containers found to update.");
+					return;
+				}
+
+				if (scannedResultFormData.is_lost > lostContainers.length) {
+					console.log("Not enough is-lost containers to update.");
+					alert("Not enough is-lost containers to update.");
+					return;
+				}
+
+				const inUseContainerIds = lostContainers.map(
+					(container) => container.container_id
+				);
+
+				const { error: updateIsLostError } = await supabase
+					.from("containers")
+					.update({ is_lost: true, employee_id: sessionData.employee_id })
+					.in("container_id", inUseContainerIds)
+					.eq("is_available", true)
+					.eq("station_id", sessionData.station_id);
+
+				if (updateIsLostError) {
+					console.error(
+						"Error updating is-lost containers:",
+						updateIsLostError
+					);
+					return;
+				} else {
+					console.log("Containers updated to lost successfully!");
+					alert("Containers updated to lost successfully!");
+				}
+			} else {
+				console.log(
+					"No 'is-lost' containers to update. Skipping is-lost containers logic."
 				);
 			}
 
@@ -1405,7 +1446,7 @@ const Dashboard = () => {
 										justifyContent: "space-between",
 									}}
 								>
-									<View style={{ width: "48%" }}>
+									<View style={{ width: "32%" }}>
 										<Text style={styles.resultAvailText}>
 											<Image
 												style={{ width: 20, height: 20 }}
@@ -1437,11 +1478,11 @@ const Dashboard = () => {
 										/>
 									</View>
 
-									<View style={{ width: "48%" }}>
-										<Text style={styles.resultMssText}>
+									<View style={{ width: "32%" }}>
+										<Text style={styles.resultUsedText}>
 											<Image
 												style={{ width: 20, height: 20 }}
-												source={require("../assets/missing_gallons.png")}
+												source={require("../assets/used_gallons.png")}
 											/>{" "}
 											In-use Containers:
 										</Text>
@@ -1464,6 +1505,38 @@ const Dashboard = () => {
 													) // Ensure it's a number
 											}
 											placeholder="In-use Containers"
+											keyboardType="numeric" // Ensure numeric keyboard is shown
+											returnKeyType="done"
+										/>
+									</View>
+									
+									<View style={{ width: "32%" }}>
+										<Text style={styles.resultMssText}>
+											<Image
+												style={{ width: 20, height: 20 }}
+												source={require("../assets/missing_gallons.png")}
+											/>{" "}
+											Lost Containers:
+										</Text>
+										<TextInput
+											style={{
+												padding: 8,
+												borderColor: "gray",
+												color: "orange",
+												fontSize: 16,
+												borderWidth: 1,
+												borderRadius: 8,
+												marginBottom: 10,
+											}}
+											value={scannedResultFormData.is_lost?.toString()} // Ensure it's a string
+											onChangeText={
+												(text) =>
+													handleScannedInputChange(
+														"is_lost",
+														parseInt(text.replace(/[^0-9]/g, "")) || 0
+													) // Ensure it's a number
+											}
+											placeholder="Lost Containers"
 											keyboardType="numeric" // Ensure numeric keyboard is shown
 											returnKeyType="done"
 										/>
@@ -1885,6 +1958,12 @@ const styles = StyleSheet.create({
 		marginBottom: 6,
 		fontWeight: "400",
 		color: "green",
+	},
+	resultUsedText: {
+		fontSize: 16,
+		marginBottom: 6,
+		fontWeight: "400",
+		color: "yellow",
 	},
 	resultMssText: {
 		fontSize: 16,
