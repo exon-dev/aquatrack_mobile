@@ -164,146 +164,162 @@ const Dashboard = () => {
 	};
 
 	const handleAddTransaction = async () => {
-		if (
-			!transactionFormData.transaction_type ||
-			transactionFormData.container_count === null ||
-			transactionFormData.container_count === undefined ||
-			isNaN(transactionFormData.container_count)
-		) {
-			alert("Please fill in all fields with valid values");
-			return;
-		}
+    if (
+        !transactionFormData.transaction_type ||
+        transactionFormData.container_count === null ||
+        transactionFormData.container_count === undefined ||
+        isNaN(transactionFormData.container_count)
+    ) {
+        alert("Please fill in all fields with valid values");
+        return;
+    }
+    console.log("Submitting transaction:", {
+        transaction_type: transactionFormData.transaction_type,
+        container_count: transactionFormData.container_count,
+        delivery_location: transactionFormData.delivery_location,
+        is_delivered: transactionFormData.is_delivered,
+        image_url: transactionFormData.image_url,
+        employee_id: sessionData.employee_id,
+        station_id: sessionData.station_id,
+    });
+    if (transactionFormData.container_count > containersData.availableCount) {
+        alert("Not enough containers available for transaction.");
+        return;
+    }
+    try {
+        // Step 1: Convert base64 image to binary format
+        const base64Image = imageUrl.split(",")[1]; // Remove the "data:image/..." prefix
+        const binaryImage = Uint8Array.from(atob(base64Image), (c) => c.charCodeAt(0));
 
-		console.log("Submitting transaction:", {
-			transaction_type: transactionFormData.transaction_type,
-			container_count: transactionFormData.container_count,
-			delivery_location: transactionFormData.delivery_location,
-			is_delivered: transactionFormData.is_delivered,
-			image_url: transactionFormData.image_url,
-			employee_id: sessionData.employee_id,
-			station_id: sessionData.station_id,
-		});
+        // Step 2: Upload the binary image to Supabase Storage
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.png`; // Generate a unique file name
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("container_images") // Bucket name
+            .upload(fileName, binaryImage, {
+                contentType: "image/png", // Adjust content type if needed
+            });
 
-		if (transactionFormData.container_count > containersData.availableCount) {
-			alert("Not enough containers available for transaction.");
-			return;
-		}
+        if (uploadError) {
+            console.error("Error uploading image to storage:", uploadError);
+            alert("Failed to upload image. Please try again.");
+            return;
+        }
 
-		try {
-			const { data: imageData, error: imgError } = await supabase
-				.from("container_images")
-				.insert([
-					{
-						image_url: imageUrl,
-					},
-				])
-				.select('image_id')
-				.single();
+        // Step 3: Get the public URL of the uploaded image
+        const { data: publicUrlData } = supabase.storage
+            .from("container_images")
+            .getPublicUrl(uploadData.path);
 
-			if (imgError) {
-				console.error("Error uploading image:", imgError);
-				return;
-			}
+        const storageImageUrl = publicUrlData.publicUrl;
 
-			const image_id = imageData.image_id;
+        // Step 4: Insert the image URL into the `container_images` table
+        const { data: imageData, error: imgError } = await supabase
+            .from("container_images")
+            .insert([
+                {
+                    image_url: storageImageUrl,
+                },
+            ])
+            .select("image_id")
+            .single();
 
-			const { error } = await supabase.from("transactions").insert([
-				{
-					transaction_type: transactionFormData.transaction_type,
-					container_count: transactionFormData.container_count,
-					delivery_location: transactionFormData.delivery_location,
-					is_delivered: transactionFormData.is_delivered,
-					image_id: image_id,
-					employee_id: sessionData.employee_id,
-					station_id: sessionData.station_id,
-				},
-			]);
+        if (imgError) {
+            console.error("Error inserting image URL into database:", imgError);
+            return;
+        }
 
-			if (error) {
-				console.error("Supabase error:", error);
-				alert("Database error. Please try again.");
-				throw new Error(error.message || "Unexpected API response format");
-			} else {
+        const image_id = imageData.image_id;
 
-				//Updating Available Containers to In-Use Containers
-				if (transactionFormData.container_count > 0 && transactionFormData.is_delivered === false) {
-					const { data: availableContainers, error: fetchAvailError } =
-						await supabase.rpc("get_random_available_containers", {
-							limit_count: transactionFormData.container_count,
-							station: sessionData.station_id,
-						});
+        // Step 5: Insert the transaction data into the `transactions` table
+        const { error } = await supabase.from("transactions").insert([
+            {
+                transaction_type: transactionFormData.transaction_type,
+                container_count: transactionFormData.container_count,
+                delivery_location: transactionFormData.delivery_location,
+                is_delivered: transactionFormData.is_delivered,
+                image_id: image_id,
+                employee_id: sessionData.employee_id,
+                station_id: sessionData.station_id,
+            },
+        ]);
 
-					if (fetchAvailError) {
-						console.error("Error fetching in-use containers:", fetchAvailError);
-						return;
-					}
+        if (error) {
+            console.error("Supabase error:", error);
+            alert("Database error. Please try again.");
+            throw new Error(error.message || "Unexpected API response format");
+        } else {
+            // Updating Available Containers to In-Use Containers
+            if (
+                transactionFormData.container_count > 0 &&
+                transactionFormData.is_delivered === false
+            ) {
+                const { data: availableContainers, error: fetchAvailError } =
+                    await supabase.rpc("get_random_available_containers", {
+                        limit_count: transactionFormData.container_count,
+                        station: sessionData.station_id,
+                    });
+                if (fetchAvailError) {
+                    console.error("Error fetching in-use containers:", fetchAvailError);
+                    return;
+                }
+                if (availableContainers.length === 0) {
+                    console.log("No available containers found to update.");
+                    alert("No available containers found to update.");
+                    return;
+                }
+                if (
+                    transactionFormData.container_count > availableContainers.length
+                ) {
+                    console.log("Not enough available containers to update.");
+                    alert("Not enough available containers to update.");
+                    return;
+                }
+                const availableContainerIds = availableContainers.map(
+                    (container) => container.container_id
+                );
+                const { error: updateAvailError } = await supabase
+                    .from("containers")
+                    .update({
+                        is_available: false,
+                        employee_id: sessionData.employee_id,
+                    })
+                    .in("container_id", availableContainerIds)
+                    .eq("is_lost", false)
+                    .eq("station_id", sessionData.station_id);
+                if (updateAvailError) {
+                    console.error(
+                        "Error updating available containers:",
+                        updateAvailError
+                    );
+                    return;
+                } else {
+                    console.log("Available containers updated to In-use successfully!");
+                    alert("Available containers updated to In-use successfully!");
+                }
+            } else {
+                console.log(
+                    "No available containers to update. Skipping available containers logic."
+                );
+            }
 
-					if (availableContainers.length === 0) {
-						console.log("No available containers found to update.");
-						alert("No available containers found to update.");
-						return;
-					}
+            setTimeout(() => runOnJS(setIsVisible)(false), 2000);
+            if (setIsVisible === false) {
+                setTransactionFormData({
+                    transaction_type: "",
+                    container_count: null,
+                    delivery_location: "",
+                    is_delivered: false,
+                });
 
-					if (
-						transactionFormData.container_count > availableContainers.length
-					) {
-						console.log("Not enough available containers to update.");
-						alert("Not enough available containers to update.");
-						return;
-					}
-
-					const availableContainerIds = availableContainers.map(
-						(container) => container.container_id
-					);
-
-					const { error: updateAvailError } = await supabase
-						.from("containers")
-						.update({
-							is_available: false,
-							employee_id: sessionData.employee_id,
-						})
-						.in("container_id", availableContainerIds)
-						.eq("is_lost", false)
-						.eq("station_id", sessionData.station_id);
-
-					if (updateAvailError) {
-						console.error(
-							"Error updating available containers:",
-							updateAvailError
-						);
-						return;
-					} else {
-						console.log("Available containers updated to In-use successfully!");
-						alert("Available containers updated to In-use successfully!");
-					}
-
-					
-				} else {
-					console.log(
-						"No available containers to update. Skipping available containers logic."
-					);
-				}
-				
-				setTimeout(() => runOnJS(setIsVisible)(false), 2000);
-
-				if (setIsVisible === false) {
-					setTransactionFormData({
-						transaction_type: "",
-						container_count: null,
-						delivery_location: "",
-						is_delivered: false,
-					});
-					
-					translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
-					alert("Transaction added successfully!");
-				}
-			}
-		} catch (error) {
-			console.error("Unexpected error:", error);
-
-			alert("Adding went wrong. Please try again.");
-		}
-	};
+                translateY.value = withSpring(0, { damping: 10, stiffness: 50 });
+                alert("Transaction added successfully!");
+            }
+        }
+    } catch (error) {
+        console.error("Unexpected error:", error);
+        alert("Adding went wrong. Please try again.");
+    }
+};
 
 	const openCamera = async () => {
 		try {
